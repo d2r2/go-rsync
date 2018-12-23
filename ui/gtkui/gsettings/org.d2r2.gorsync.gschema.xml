@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Copyright © 2002 Havoc Pennington
+  Copyright © 2002 Jonathan Blandford
+  Copyright © 2003, 2004 Mariano Suárez-Alvarez
+  Copyright © 2005 Kjartan Maraas
+  Copyright © 2005 Tony Tsui
+  Copyright © 2006 Guilherme de S. Pastore
+  Copyright © 2009, 2010 Behdad Esfahbod
+  Copyright © 2008, 2010 Christian Persch
+  Copyright © 2018 Denis Dyakov
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
+  Modified and adapted from gnome-terminal for use with Tilix by Gerald Nunn
+  Modified and adapted for use with GTK+ Gorsync Backup by Denis Dyakov
+-->
+<schemalist gettext-domain="gorsync">
+
+  <!-- Settings -->
+  <schema id="org.d2r2.gorsync.Settings" path="/org/d2r2/gorsync/">
+
+    <key name="ignore-file-signature" type="s">
+      <default>'!!!__SKIPBACKUP__!!!'</default>
+    </key>
+
+    <key name="perform-backup-completion-desktop-notification" type="b">
+      <default>true</default>
+      <summary>Show desktop notification about backup procedure completion</summary>
+    </key>
+
+    <key name="run-backup-completion-notification-script" type="b">
+      <default>false</default>
+      <summary>Run special script located in /etc/gorsync/ to notify about backup completion</summary>
+    </key>
+
+    <key name="rsync-retry-count" type="i">
+      <default>2</default>
+    </key>
+
+    <key name="dont-show-about-dialog-on-startup" type="b">
+      <default>false</default>
+      <summary>Do not shows about dialog on application startup</summary>
+    </key>
+
+    <key name="session-log-widget-font-size" type="s">
+      <default>'14px'</default>
+      <summary>Session log window font size (in pixels)</summary>
+    </key>
+
+    <key name="ui-language" type="s">
+      <default>''</default>
+      <summary>User interface language</summary>
+    </key>
+
+    <key name="manage-automatically-backup-block-size" type="b">
+      <default>true</default>
+      <summary>Determine automatically default backup block size</summary>
+    </key>
+
+    <key name="max-backup-block-size-mb" type="i">
+      <default>300</default>
+      <summary>Maximum batch size to backup at once</summary>
+    </key>
+
+    <key name="enable-use-of-previous-backup" type="b">
+      <default>true</default>
+      <summary>Activate attempts for search and use of previous backups</summary>
+    </key>
+
+    <key name="number-of-previous-backup-to-use" type="i">
+      <default>3</default>
+      <summary>Specify number of previous backups used for deduplication</summary>
+    </key>
+
+    <key name="enable-low-level-log-for-rsync" type="b">
+      <default>false</default>
+      <summary>Enable RSYNC log level log</summary>
+    </key>
+
+    <key name="enable-intensive-low-level-log-for-rsync" type="b">
+      <default>false</default>
+      <summary>Enable RSYNC intensive log level log (include stdout output)</summary>
+    </key>
+
+    <key name="rsync-compress-file-transfer" type="b">
+      <default>false</default>
+      <summary>RSYNC --compress option. Look for RSYNC help for details</summary>
+    </key>
+
+    <key name="rsync-recreate-symlinks" type="b">
+      <default>true</default>
+      <summary>RSYNC --links option. Look for RSYNC help for details</summary>
+    </key>
+
+    <key name="rsync-transfer-source-permissions" type="b">
+      <default>true</default>
+      <summary>RSYNC --perms option. Look for RSYNC help for details</summary>
+    </key>
+
+    <key name="rsync-transfer-source-group" type="b">
+      <default>true</default>
+      <summary>RSYNC --group option. Look for RSYNC help for details</summary>
+    </key>
+
+    <key name="rsync-transfer-source-owner" type="b">
+      <default>true</default>
+      <summary>RSYNC --owner option. Look for RSYNC help for details</summary>
+    </key>
+
+    <key name="rsync-transfer-device-files" type="b">
+      <default>false</default>
+      <summary>RSYNC --devices option. Look for RSYNC help for details</summary>
+    </key>
+
+    <key name="rsync-transfer-special-files" type="b">
+      <default>false</default>
+      <summary>RSYNC --specials option. Look for RSYNC help for details</summary>
+    </key>
+
+    <key name="profile-list" type="as">
+      <default>[]</default>
+    </key>
+
+  </schema>
+
+  <!-- Backup settings -->
+  <schema id="org.d2r2.gorsync.Settings.Profile">
+
+    <key name="profile-name" type="s">
+      <default>''</default>
+    </key>
+
+    <key name="destination-root-path" type="s">
+      <default>''</default>
+    </key>
+
+    <key name="source-list" type="as">
+      <default>[]</default>
+    </key>
+
+  </schema>
+
+  <schema id="org.d2r2.gorsync.Settings.Profile.Source">
+
+    <key name="rsync-source-path" type="s">
+      <default>''</default>
+    </key>
+
+    <key name="dest-subpath" type="s">
+      <default>''</default>
+    </key>
+
+    <key name="source-dest-block-enabled" type="b">
+      <default>true</default>
+    </key>
+
+  </schema>
+
+</schemalist>

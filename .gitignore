@@ -1,0 +1,5 @@
+*.log
+gorsync
+go-rsync
+builds/fpm_packages/packages/*
+data/assets_vfsdata.go

@@ -1,0 +1,890 @@
+[HelloWorld]
+other = "Hello world !!!"
+
+
+#----------------------------------------------------
+# General translations throughout the application
+#----------------------------------------------------
+
+[AppEnvironmentTitle]
+description = "AboutDialog environment section title"
+other = "Environment:"
+
+[AppTitleExtra]
+description = "Minor application description"
+other = "(RSYNC frontend)"
+
+[GLIBInfo]
+description = "GLIB versions info"
+other = "GLIB compiled version {{.GLIBCompiledVer}}, detected version {{.GLIBDetectedVer}}"
+
+[GTKInfo]
+description = "GTK+ versions info"
+other = "GTK+ compiled version {{.GTKCompiledVer}}, detected version {{.GTKDetectedVer}}"
+
+[RsyncInfo]
+description = "RSYNC version/protocol info"
+other = "RSYNC detected version/protocol {{.RSYNCDetectedVer}}/{{.RSYNCDetectedProtocol}}"
+
+[GolangInfo]
+description = "Golang version and application architecture"
+other = "Compiled with {{.GolangVersion}} {{.AppArchitecture}}"
+
+[DialogYesButton]
+other = "YES"
+
+[DialogNoButton]
+other = "NO"
+
+
+#----------------------------------------------------
+# About dialog translations
+#----------------------------------------------------
+
+[AboutDlgAppFeaturesAndBenefitsTitle]
+description = "AboutDialog Features and Benefits section title"
+other = "Features and benefits:"
+
+[AboutDlgAppFeaturesAndBenefitsSection]
+description = "AboutDialog Features and Benefits section text"
+other = """
+- Multiple backup profiles can be created. Moreover, each profile
+can be configured to get data from multiple RSYNC sources.
+- 2-pass backup session approach to estimate optimal backup
+strategy and backup size in 1st pass. Display estimated
+time of completion in 2nd pass.
+- Demonstrate \"deduplication\" with repeated backup sessions
+on modern file systems. Works if backup destination is
+Ext3/Ext4/NTFS file system (employ file system hardlink
+feature). Wouldn't work if backup destination is
+FAT family, for instance.
+- Improved GOTK3+ library (GTK+ golang bindings) used for GUI.
+"""
+
+[AboutDlgAppDescriptionSection]
+description = "AboutDialog application section text"
+other = """
+Best GTK+ frontend for brilliant RSYNC console utility.
+Easy-to-use backup app with innovative approach.
+"""
+
+[AboutDlgReleasedUnderLicense]
+description = "License application released under"
+other = "Released under {{.LicenseName}}."
+
+[AboutDlgFollowMyGithubProjectTitle]
+description = "AboutDialog my github project title"
+other = "Follow my golang projects on GitHub:"
+
+[AboutDlgAppCopyright]
+description = "Application copyright line"
+other = "Copyright {{.AppCreationYears}} {{.AppCopyrightAuthor}}"
+
+[AboutDlgAppAuthorsBlock]
+description = "Application authors block"
+other = """
+Written by Denis Dyakov <denis.dyakov@gmail.com>
+"""
+
+[AboutDlgDoNotShowCaption]
+other = "Do not show this information at application startup"
+
+
+#----------------------------------------------------
+# Preference dialog translations
+#----------------------------------------------------
+
+[PrefDlgGeneralUserInterfaceOptionsSecion]
+description = "Options section title"
+other = "User interface options"
+
+[PrefDlgGeneralBackupSettingsSection]
+description = "Options section title"
+other = "Backup settings"
+
+[PrefDlgAdvancedRsyncDedupSettingsSection]
+description = "Options section title"
+other = "RSYNC deduplication settings"
+
+[PrefDlgAdvansedRsyncSettingsSection]
+description = "Options section title"
+other = "RSYNC settings"
+
+[PrefDlgAdvancedBackupSettingsSection]
+description = "Options section title"
+other = "Backup settings"
+
+[PrefDlgAdvancedRsyncFileTransferOptionsSection]
+description = "Options section title"
+other = "RSYNC file transfer options"
+
+[PrefDlgDoNotShowAtAppStartupCaption]
+other = "Do not show about information dialog\nat application startup"
+
+[PrefDlgDoNotShowAtAppStartupHint]
+other = "Do not show at startup about dialog with general information about application."
+
+[PrefDlgSessionLogControlFontSizeCaption]
+other = "Session log widget font size"
+
+[PrefDlgSessionLogControlFontSizeHint]
+other = "Define session log widget font size for ease of data reading."
+
+[PrefDlgSourcesCaption]
+other = "Sources"
+
+[PrefDlgSourceRsyncPathCaption]
+other = "Source RSYNC path"
+
+[PrefDlgSourceRsyncPathRetryHint]
+other = "Press to validate RSYNC source."
+
+[PrefDlgSourceRsyncPathDescriptionHint]
+other = "RSYNC source URL, which should start with \"rsync://\" prefix."
+
+[PrefDlgSourceRsyncPathNotValidatedHint]
+other = "Not verified (disabled)"
+
+[PrefDlgSourceRsyncPathEmptyError]
+other = "RSYNC source path can not be empty"
+
+[PrefDlgSourceRsyncValidatingHint]
+other = "Validating... This may take some time"
+
+[PrefDlgDestinationSubpathCaption]
+other = "Destination subpath"
+
+[PrefDlgDestinationSubpathHint]
+other = "File system extra path to add to the backup destination root folder, where data taken from this specific RSYNC source will be stored. Remember that in case of multiple RSYNC sources, destination subpath should be differ from each other in current profile scope."
+
+[PrefDlgDestinationSubpathNotValidatedHint]
+other = "Not verified (disabled)"
+
+[PrefDlgDestinationSubpathExpressionError]
+other = "Invalid file path expression. Perhaps path string contains some restricted characters, like <>:\"|?*, or empty folder names"
+
+[PrefDlgDestinationSubpathNotUniqueError]
+other = "Each destination subpath should be unique for backup profile"
+
+[PrefDlgEnableBackupBlockCaption]
+other = "Active"
+
+[PrefDlgEnableBackupBlockHint]
+other = "Include/exclude current block from backup process. You can use this option for temporary disable backup block, if you are not going purge this source forever."
+
+[PrefDlgDeleteBackupBlockCaption]
+other = "Remove"
+
+[PrefDlgDeleteBackupBlockHint]
+other = "Delete current RSYNC source/destination block"
+
+[PrefDlgProfileNameCaption]
+other = "Profile name"
+
+[PrefDlgProfileNameHint]
+other = "Public profile name."
+
+[PrefDlgProfileNameExistsWarning]
+other = "Profile with name \"{{.ProfileName}}\" already exists. Please, correct the name"
+
+[PrefDlgProfileNameEmptyWarning]
+other = "Empty profile name is not allowed. Please, correct the name"
+
+[PrefDlgDefaultDestPathCaption]
+other = "Default destination path"
+
+[PrefDlgDefaultDestPathHint]
+other = "Path to the default destination location where your backup data will be stored."
+
+[PrefDlgSkipFolderBackupFileSignatureCaption]
+other = "Skip folder backup file signature"
+
+[PrefDlgSkipFolderBackupFileSignatureHint]
+other = "Once file with this name found in the folder, folder content (including all subfolders) is not backed up. If you'd like to skip backup of some folders, just put empty file with this name in there."
+
+[PrefDlgPerformDesktopNotificationCaption]
+other = "Show desktop notification on backup completion"
+
+[PrefDlgPerformDesktopNotificationHint]
+other = "Display message in desktop tray location about backup completion."
+
+[PrefDlgRunNotificationScriptCaption]
+other = "Run notification script on backup completion"
+
+[PrefDlgRunNotificationScriptHint]
+other = """Run script \"/etc/gorsync/notification.sh\" (if exists) on backup completion.
+Next environment variables are passed to the script:
+- BACKUP_STATUS: overall backup status. Might accept values 'terminated', 'failed', 'done', 'done_with_errors'.
+- SIZE_BACKEDUP_MB: total size of data successfully backed up in megabytes.
+- SIZE_FAILED_MB: size failed to backup due to errors in megabytes.
+- SIZE_SKIPPED_MB: size skipped to backup in megabytes.
+- TIME_TAKEN_SEC: time taken for whole backup process in seconds."""
+
+[PrefDlgAutoManageBackupBlockSizeCaption]
+other = "Manage automatically backup block size"
+
+[PrefDlgAutoManageBackupBlockSizeHint]
+other = "Automatically determine optimal backup block size. Application is trying to split backup process to pieces to improve progress response. Backup block size may affect to backup productivity."
+
+[PrefDlgBackupBlockSizeCaption]
+other = "Block size (in MB) to backup at once"
+
+[PrefDlgBackupBlockSizeHint]
+other = "Block size (in megabytes) to backup at once. Application is trying to split backup process to pieces to improve progress response. Backup block size may affect to backup productivity."
+
+[PrefDlgRsyncRetryCountCaption]
+other = "RSYNC utility retry count"
+
+[PrefDlgRsyncRetryCountHint]
+other = "Number of retry attempts until RSYNC get failed. Each separate call to RSYNC will be retried corresponding number of times in case of failure."
+
+[PrefDlgRsyncLowLevelLogCaption]
+other = "RSYNC utility low level log"
+
+[PrefDlgRsyncLowLevelLogHint]
+other = "Enable low level logging of RSYNC utility calls, saving results in separate log file."
+
+[PrefDlgRsyncIntensiveLowLevelLogCaption]
+other = "RSYNC utility intensive low level log"
+
+[PrefDlgRsyncIntensiveLowLevelLogHint]
+other = "Enable intensive low level log of RSYNC utility calls (include STDOUT output)."
+
+[PrefDlgUsePreviousBackupForDedupCaption]
+other = "Use previous backup for\"deduplication\""
+
+[PrefDlgUsePreviousBackupForDedupHint]
+other = "Each backup session is trying to find previous backup. Once previous backup found, it will be passed to RSYNC via --link-dest option, to decrease size of data send back and forth (thus significantly speed up following backup processes). It's highly recommended to do not switch off this option."
+
+[PrefDlgNumberOfPreviousBackupToUseCaption]
+other = "Number of previous backup sessions to use\nfor \"deduplication\""
+
+[PrefDlgNumberOfPreviousBackupToUseHint]
+other = "Number of previous backup sessions used for deduplication greater than 1, would increase chances for file deduplication occurrence."
+
+[PrefDlgRsyncCompressFileTransferCaption]
+other = "Compress file transfer"
+
+[PrefDlgRsyncCompressFileTransferHint]
+other = "See RSYNC --compress option.\nWith this option, RSYNC compresses the file data as it is sent to the destination machine, which reduces the amount of data being transmitted - something that is useful over a slow connection."
+
+[PrefDlgRsyncTransferSourcePermissionsCaption]
+other = "Transfer source permissions"
+
+[PrefDlgRsyncTransferSourcePermissionsHint]
+other = "See RSYNC --perms option.\nThis option causes the receiving RSYNC to set the destination permissions to be the same as the source permissions."
+
+[PrefDlgRsyncTransferSourceOwnerCaption]
+other = "Transfer source owner"
+
+[PrefDlgRsyncTransferSourceOwnerHint]
+other = "See RSYNC --owner option.\nThis option causes RSYNC to preserve the owner of the destination file - the same as the source file, but only if the receiving RSYNC is being run as the super-user."
+
+[PrefDlgRsyncTransferSourceGroupCaption]
+other = "Transfer source group"
+
+[PrefDlgRsyncTransferSourceGroupHint]
+other = "See RSYNC --group option.\nThis option causes RSYNC to preserve the group of the destination file - the same as the source file. If the receiving program is not running as the super-user (or if --no-super was specified), only groups that the invoking user on the receiving side is a member of will be preserved."
+
+[PrefDlgRsyncRecreateSymlinksCaption]
+other = "Recreate symlinks"
+
+[PrefDlgRsyncRecreateSymlinksHint]
+other = "See RSYNC --links option.\nWhen symlinks are encountered, recreate the symlink on the destination."
+
+[PrefDlgRsyncTransferDeviceFilesCaption]
+other = "Transfer device files"
+
+[PrefDlgRsyncTransferDeviceFilesHint]
+other = "See RSYNC --devices option.\nThis option causes RSYNC to transfer character and block device files to the remote system to recreate these devices. This option has no effect if the receiving RSYNC is not run as the super-user."
+
+[PrefDlgRsyncTransferSpecialFilesCaption]
+other = "Transfer special files"
+
+[PrefDlgRsyncTransferSpecialFilesHint]
+other = "See RSYNC --specials option.\nThis option causes RSYNC to transfer special files such as named sockets and fifos."
+
+[PrefDlgLanguageCaption]
+decsription = ""
+other = "Language (application restart required)"
+
+[PrefDlgLanguageHint]
+decsription = ""
+other = "User interface language. Could be automatically selected (depending on system settings), either specified explicitly."
+
+[PrefDlgDefaultLanguageEntry]
+decsription = "Combo Box entry to specify language select by default"
+other = "<default>"
+
+[PrefDlgAddBackupBlockHint]
+other = "Add new RSYNC source/destination block"
+
+[PrefDlgProfileConfigIssuesDetectedWarning]
+other = "Profile configuration issues detected. Check profile settings."
+
+[PrefDlgPreferencesDialogCaption]
+other = "Preferences"
+
+[PrefDlgGeneralProfileTabName]
+other = "Backup profile"
+
+[PrefDlgProfileTabName]
+other = "Profile ({{.ProfileName}})"
+
+[PrefDlgGeneralTabName]
+other = "General"
+
+[PrefDlgAdvancedTabName]
+other = "Advanced"
+
+[PrefDlgAddProfileHint]
+other = "Add backup profile"
+
+[PrefDlgDeleteProfileHint]
+other = "Delete backup profile"
+
+[PrefDlgDeleteProfileDialogTitle]
+other = "Delete selected profile?"
+
+[PrefDlgDeleteProfileDialogText]
+other = """Press {{.YesButton}} to delete profile.
+"""
+
+[SchemaConfigDlgTitle]
+other = "Schema settings configuration error"
+
+[SchemaConfigDlgNoSchemaFoundError]
+other = """No GLIB settings schema is found.
+Install xml schema and re-run application."""
+
+[SchemaConfigDlgSchemaDoesNotFoundError]
+other = """GLIB schema \"{{.SettingsID}}\" does not found.
+Install xml schema and re-run application."""
+
+[SchemaConfigDlgSchemaErrorAdvise]
+other = "Find and execute script \"{{.ScriptName}}\" from application sources to resolve the issue."
+
+
+#----------------------------------------------------
+# Application window translations
+#----------------------------------------------------
+
+[AppWindowAboutMenuCaption]
+other = "About"
+
+[AppWindowPreferencesMenuCaption]
+other = "Preferences"
+
+[AppWindowPreferencesHint]
+other = "Show preferences"
+
+[AppWindowQuitMenuCaption]
+other = "Quit application"
+
+[AppWindowRunBackupHint]
+other = "Run backup process"
+
+[AppWindowStopBackupHint]
+other = "Terminate backup process"
+
+[AppWindowProfileCaption]
+other = "Select backup profile"
+
+[AppWindowProfileHint]
+other = "Choose profile defined in preference menu from the drop down list to start backup process. Profile contains all specific settings including RSYNC sources and destination location to backup."
+
+[AppWindowProfileBackupPlanInfoSourceCount]
+other = "RSYNC sources:"
+
+[AppWindowProfileBackupPlanInfoTotalSize]
+other = "Total size:"
+
+[AppWindowProfileBackupPlanInfoSkipSize]
+other = "Skip size:"
+
+[AppWindowProfileBackupPlanInfoDirectoryCount]
+other = "Directory count:"
+
+[AppWindowInquiringProfileStatus]
+other = "Inquiring backup profile \"{{.ProfileName}}\"... Please wait, this may take some time."
+
+[AppWindowNoneProfileEntry]
+other = "<None>"
+
+[AppWindowDestPathCaption]
+other = "Destination root path"
+
+[AppWindowDestPathHint]
+other = "Destination path for backup. You can alter default path taken from profile preferences."
+
+[AppWindowDestPathIsValidStatusPart1]
+other = "Path"
+
+[AppWindowDestPathIsValidStatusPart2]
+other = "is valid"
+
+[AppWindowDestPathIsEmptyError1]
+other = "Path is not defined. Select path manually or assign default path to backup profile in preference menu."
+
+[AppWindowDestPathIsEmptyError2]
+other = "Destination path is empty. First select destination folder for backup."
+
+[AppWindowDestPathIsNotExistError]
+other = "Folder \"{{.FolderPath}}\" does not exist or permission denied."
+
+[AppWindowDestPathIsNotExistAdvise]
+other = "Perhaps, you need to attach destination USB-disk or flash drive, and re-select backup profile again."
+
+[AppWindowBackupProgressStartMessage]
+other = "Start backup process..."
+
+[AppWindowBackupProgressInquiringSourceID]
+other = "Inquiring source #{{.SourceID}}..."
+
+[AppWindowBackupProgressInquiringSourceDescription]
+other = "source: \"{{.RsyncSource}}\""
+
+[AppWindowBackupProgressTimePassedSuffix]
+other = "passed"
+
+[AppWindowBackupProgressETASuffix]
+other = "ETA"
+
+[AppWindowBackupProgressSizeCompletedSuffix]
+other = "done"
+
+[AppWindowBackupProgressSizeLeftToProcessSuffix]
+other = "left to process"
+
+[AppWindowBackupProgressCompleted]
+other = "Successfully completed!"
+
+[AppWindowBackupProgressCompletedWithErrors]
+other = "Completed with errors!"
+
+[AppWindowBackupProgressTerminated]
+other = "Terminated!"
+
+[AppWindowBackupProgressFailed]
+other = "Failed!"
+
+[AppWindowOverallProgressCaption]
+other = "Overall progress"
+
+[AppWindowProgressStatusCaption]
+other = "Progress status"
+
+[AppWindowSessionLogCaption]
+other = "Session log"
+
+[AppWindowCannotStartBackupProcessTitle]
+other = "Can't start backup process"
+
+[AppWindowTerminateBackupDlgTitle]
+other = "Terminate backup process?"
+
+[AppWindowTerminateBackupDlgText]
+other = """ 
+Press {{.TerminateButton}} to interrupt backup procedure.
+Press {{.EscapeKey}} key either {{.ContinueButton}} to continue.
+"""
+
+[AppWindowTerminateBackupDlgTerminateButton]
+other = "TERMINATE"
+
+[AppWindowTerminateBackupDlgContinueButton]
+other = "CONTINUE"
+
+[AppWindowOutOfSpaceDlgTitle]
+other = "Out of disk space detected"
+
+[AppWindowOutOfSpaceDlgText1]
+other = """
+Destination path \"{{.Path}}\" is out of space: {{.FreeSpace}} lefts."""
+
+[AppWindowOutOfSpaceDlgText2]
+other = """ 
+Free up disk space and press {{.RetryButton}} for new retry attempt.
+Press {{.EscapeKey}} key either {{.IgnoreButton}} to skip new retry attempt, but continue backup process.
+Press {{.TerminateButton}} to interrupt backup process."""
+
+[AppWindowOutOfSpaceDlgIgnoreButton]
+other = "IGNORE"
+
+[AppWindowOutOfSpaceDlgRetryButton]
+other = "RETRY"
+
+[AppWindowOutOfSpaceDlgTerminateButton]
+other = "TERMINATE"
+
+[AppWindowRsyncUtilityDlgTitle]
+other = "RSYNC utility not found"
+
+[AppWindowRsyncUtilityDlgNotFoundError]
+other = """Test RSYNC call get failed.
+Install RSYNC and restart application."""
+
+[AppWindowShowNotificationError]
+other = "Can't show desktop notification: {{.Error}}"
+
+[AppWindowRunNotificationScriptError]
+other = "Can't run notification script: {{.Error}}"
+
+[AppWindowNotificationScriptExecutableError]
+other = "Can't run notification script \"{{.ScriptPath}}\" because it isn't executable"
+
+[AppWindowGetExecutableScriptInfoError]
+other = "Can't get information about notification script: {{.Error}}"
+
+[GeneralHintStatusCaption]
+other = "Status:"
+
+[GeneralHintDescriptionCaption]
+other = "Description:"
+
+
+#----------------------------------------------------
+# Log translations
+#----------------------------------------------------
+
+[LogPlanStageStarting]
+other = "Starting plan stage..."
+
+[LogPlanStageStartTime]
+other = "Start time: {{.Time}}"
+
+[LogPlanStageEndTime]
+other = "End time: {{.Time}}"
+
+[LogPlanStartIterateViaNSources]
+one = "Iterate via {{.SourceCount}} RSYNC source to estimate folder structures and sizes..."
+other = "Iterate via {{.SourceCount}} RSYNC sources to estimate folder structures and sizes..."
+
+[LogPlanStageInquirySource]
+other = "Inquiry information from source #{{.SourceID}} \"{{.Path}}\""
+
+[LogPlanStageSourceFolderCountInfo]
+one = "{{.FolderCount}} folder found"
+other = "{{.FolderCount}} folders found"
+
+[LogPlanStageSourceSkipFolderCountInfo]
+one = "where {{.SkipFolderCount}} folder will be skipped"
+other = "where {{.SkipFolderCount}} folders will be skipped"
+
+[LogPlanStageSourceTotalSizeInfo]
+other = "with total size of {{.TotalSize}} to process"
+
+[LogPlanStageUseTemporaryFolder]
+other = "Use temporary folder to get and analyze backup directory structure: \"{{.Path}}\""
+
+[LogBackupStageStarting]
+other = "Starting backup stage..."
+
+[LogBackupStageStartTime]
+other = "Start time: {{.Time}}"
+
+[LogBackupStageEndTime]
+other = "End time: {{.Time}}"
+
+[LogBackupStageBackupToDestination]
+other = "Backup data to destination path: \"{{.Path}}\""
+
+[LogBackupStagePreviousBackupDiscoveryPermissionError]
+other = "Error reading folder \"{{.Path}}\": permission denied"
+
+[LogBackupStagePreviousBackupDiscoveryOtherError]
+other = "Error reading folder \"{{.Path}}\": {{.Error}}"
+
+[LogBackupStagePreviousBackupFoundAndWillBeUsed]
+other = "Previous backups found (and will be used) at root path \"{{.Path}}\":"
+
+[LogBackupStagePreviousBackupFoundButDisabled]
+other = "Previous backups found (but disabled to use) at root path \"{{.Path}}\":"
+
+[LogBackupStagePreviousBackupNotFound]
+other = "There is no valid previous backup found (neither time acceleration nor reduction in size are expected)"
+
+[LogBackupStageStartToBackupFromSource]
+other = "Start to backup from source #{{.SeqID}}: {{.RsyncSource}}"
+
+[LogBackupStageRenameDestination]
+other = "Rename destination path to: \"{{.Path}}\""
+
+[LogBackupStageFailedToCreateFolder]
+other = "failed to create folder \"{{.Path}}\": {{.Error}}"
+
+[LogBackupDetectedTotalBackupSizeGetChanged]
+other = "Detected, that originally established total backup size get changed."
+
+[LogBackupStageProgressBackupSuccess]
+other = "{{.SizeLeft}}, {{.TimeLeft}} left, {{.BackupAction}}: {{.FolderPath}}"
+
+[LogBackupStageProgressBackupError]
+other = "{{.Error}} to backup {{.Size}} to {{.FolderPath}}"
+
+[LogBackupStageProgressSkipBackupError]
+other = "{{.Error}} to skip backup {{.Size}} to {{.FolderPath}}"
+
+[LogBackupStageCriticalError]
+other = "Critical issue: {{.Error}}"
+
+[LogBackupStageOutOfSpaceWarning]
+other = "Destination path is out of space, only {{.SizeLeft}} left"
+
+[LogBackupStageDiscoveringPreviousBackups]
+other = "Discovering previous backup sessions..."
+
+[LogBackupStageRecoveredFromError]
+other = "Recovered from \"{{.Error}}\""
+
+[LogBackupStageSaveRsyncExtraLogTo]
+other = "RSYNC extra log saved to: \"{{.Path}}\""
+
+[LogBackupStageSaveLogTo]
+other = "Log saved to: \"{{.Path}}\""
+
+[LogBackupStageExitMessage]
+other = "Goodbye..."
+
+[LogStatisticsSummaryCaption]
+other = "Summary:"
+
+[LogStatisticsEnvironmentCaption]
+other = "Environment:"
+
+[LogStatisticsResultsCaption]
+other = "Results:"
+
+[LogStatisticsStatusCaption]
+other = "Status:"
+
+[LogStatisticsStatusSuccessfullyCompleted]
+other = "Successfully completed"
+
+[LogStatisticsStatusCompletedWithErrors]
+other = "Completed with errors"
+
+[LogStatisticsPlanStageCaption]
+other = "Plan stage:"
+
+[LogStatisticsPlanStageSourceToBackup]
+other = "Source #{{.SeqID}} to backup: {{.RsyncSource}}"
+
+[LogStatisticsPlanStageTotalSize]
+other = "Total size to backup: {{.TotalSize}}"
+
+[LogStatisticsPlanStageFolderCount]
+other = "Folder's count total: {{.FolderCount}}"
+
+[LogStatisticsPlanStageFolderSkipCount]
+other = "Folder's skip occurrence count: {{.FolderCount}}"
+
+[LogStatisticsPlanStageTimeTaken]
+other = "Time taken: {{.TimeTaken}}"
+
+[LogStatisticsBackupStageCaption]
+other = "Backup stage:"
+
+[LogStatisticsBackupStageDestinationPath]
+other = "Destination path: \"{{.Path}}\""
+
+[LogStatisticsBackupStagePreviousBackupFound]
+other = "Previous backups found at root path \"{{.Path}}\":"
+
+[LogStatisticsBackupStagePreviousBackupFoundButDisabled]
+other = "Previous backups found (but NOT USED: disabled in settings) at root path \"{{.Path}}\":"
+
+[LogStatisticsBackupStageNoValidPreviousBackupFound]
+other = "There is no valid previous backup found"
+
+[LogStatisticsBackupStageTotalSize]
+other = "Successfully backed up size: {{.TotalSize}}"
+
+[LogStatisticsBackupStageSkippedSize]
+other = "Skipped size: {{.SkippedSize}}"
+
+[LogStatisticsBackupStageFailedToBackupSize]
+other = "Failed to backup size: {{.FailedToBackupSize}}"
+
+[LogStatisticsBackupStageTimeTaken]
+other = "Time taken: {{.TimeTaken}}"
+
+
+#----------------------------------------------------
+# Backup type translations
+#----------------------------------------------------
+
+[FolderBackupTypeSkipDescription]
+description = "Skip folder backup"
+other = "skip folder"
+
+[FolderBackupTypeRecursiveDescription]
+description = "Backup folder content recursively"
+other = "backup folder content"
+
+[FolderBackupTypeContentDescription]
+description = "Backup flat folder content and only files in it"
+other = "backup folder files"
+
+
+#----------------------------------------------------
+# Desktop notification translations
+#----------------------------------------------------
+
+[DesktopNotificationBackupSuccessfullyCompleted]
+other = "Backup \"{{.ProfileName}}\" successfully completed"
+
+[DesktopNotificationBackupCompletedWithErrors]
+other = "Backup \"{{.ProfileName}}\" completed with errors"
+
+[DesktopNotificationBackupTerminated]
+other = "Backup \"{{.ProfileName}}\" terminated"
+
+[DesktopNotificationBackupFailed]
+other = "Backup \"{{.ProfileName}}\" failed"
+
+[DesktopNotificationTotalSize]
+other = "Backed up: {{.TotalSize}}."
+
+[DesktopNotificationSkippedSize]
+other = "Skipped: {{.SkippedSize}}."
+
+[DesktopNotificationFailedToBackupSize]
+other = "Failed: {{.FailedToBackupSize}}."
+
+[DesktopNotificationTimeTaken]
+other = "Time taken: {{.TimeTaken}}."
+
+
+#----------------------------------------------------
+# RSYNC translations
+#----------------------------------------------------
+
+[RsyncCallFailedError]
+other = "RSYNC call failed ({{.Description}}, code {{.ExitCode}})"
+
+[RsyncProcessTerminatedError]
+other = "RSYNC process terminated"
+
+[RsyncCannotFindFolderSizeOutputError]
+other = "can't find folder size in RSYNC output"
+
+[RsyncCannotParseFolderSizeOutputError]
+other = "can't parse folder size from RSYNC output \"{{.Text}}\""
+
+
+#----------------------------------------------------
+# Values translations
+#----------------------------------------------------
+
+[DaysLong]
+description = "Plural case"
+one = "day"
+other = "days"
+
+[DaysShort]
+description = "Plural case"
+one = "day"
+other = "days"
+
+[HoursLong]
+description = "Plural case"
+one = "hour"
+other = "hours"
+
+[HoursShort]
+description = "Plural case"
+one = "hr"
+other = "hr"
+
+[MinutesLong]
+description = "Plural case"
+one = "minute"
+other = "minutes"
+
+[MinutesShort]
+description = "Plural case"
+one = "min"
+other = "min"
+
+[SecondsLong]
+description = "Plural case"
+one = "second"
+other = "seconds"
+
+[SecondsShort]
+description = "Plural case"
+one = "sec"
+other = "sec"
+
+
+[BytesLong]
+description = "Plural case"
+one = "byte"
+other = "bytes"
+
+[BytesShort]
+description = "Plural case"
+one = "B"
+other = "B"
+
+[KiloBytesLong]
+description = "Plural case"
+one = "kilobyte"
+other = "kilobytes"
+
+[KiloBytesShort]
+description = "Plural case"
+one = "kB"
+other = "kB"
+
+[MegaBytesLong]
+description = "Plural case"
+one = "megabyte"
+other = "megabytes"
+
+[MegaBytesShort]
+description = "Plural case"
+one = "MB"
+other = "MB"
+
+[GigaBytesLong]
+description = "Plural case"
+one = "gigabyte"
+other = "gigabytes"
+
+[GigaBytesShort]
+description = "Plural case"
+one = "GB"
+other = "GB"
+
+[TeraBytesLong]
+description = "Plural case"
+one = "terabyte"
+other = "terabytes"
+
+[TeraBytesShort]
+description = "Plural case"
+one = "TB"
+other = "TB"
+
+[PetaBytesLong]
+description = "Plural case"
+one = "petabyte"
+other = "petabytes"
+
+[PetaBytesShort]
+description = "Plural case"
+one = "PB"
+other = "PB"
+
+[ExaBytesLong]
+description = "Plural case"
+one = "exabyte"
+other = "exabytes"
+
+[ExaBytesShort]
+description = "Plural case"
+one = "EB"
+other = "EB"
+

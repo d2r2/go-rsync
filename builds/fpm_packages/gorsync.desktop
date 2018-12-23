@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Gorsync Backup
+Comment=Easy-to-use backup app based on Rsync console utility
+Exec=gorsync
+Icon=media-tape-symbolic
+Type=Application
+Encoding=UTF-8
+Terminal=false
+Categories=GNOME;GTK;Utility;System;
+Keywords=backup;rsync;

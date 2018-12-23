@@ -1,0 +1,924 @@
+[HelloWorld]
+other = "Привет Мир!!!"
+
+
+#----------------------------------------------------
+# General translations throughout the application
+#----------------------------------------------------
+
+[AppEnvironmentTitle]
+description = "AboutDialog environment section title"
+other = "Окружение:"
+
+[AppTitleExtra]
+description = "Minor application description"
+other = "(оболочка для RSYNC)"
+
+[GLIBInfo]
+description = "GLIB versions info"
+other = "GLIB скомпилирована версия {{.GLIBCompiledVer}}, обнаружена версия {{.GLIBDetectedVer}}"
+
+[GTKInfo]
+description = "GTK+ versions info"
+other = "GTK+ скомпилирована версия {{.GTKCompiledVer}}, обнаружена версия {{.GTKDetectedVer}}"
+
+[RsyncInfo]
+description = "RSYNC version/protocol info"
+other = "RSYNC обнаружена версия/протокол {{.RSYNCDetectedVer}}/{{.RSYNCDetectedProtocol}}"
+
+[GolangInfo]
+description = "Golang version and application architecture"
+other = "Скомпилировано с {{.GolangVersion}} {{.AppArchitecture}}"
+
+[DialogYesButton]
+other = "ДА"
+
+[DialogNoButton]
+other = "НЕТ"
+
+
+#----------------------------------------------------
+# About dialog translations
+#----------------------------------------------------
+
+[AboutDlgAppFeaturesAndBenefitsTitle]
+description = "AboutDialog Features and Benefits section title"
+other = "Особенности и преимущества:"
+
+[AboutDlgAppFeaturesAndBenefitsSection]
+description = "AboutDialog Features and Benefits section text"
+other = """
+- Позволяет создать множество профилей резервного копирования.
+При этом каждый профиль может быть настроен для получения
+данных из нескольких источников RSYNC.
+- 2-x проходной подход в резервном копировании для выбора стратегии и
+расчета размера резервной копии в 1-м проходе. Расчетное время
+завершения отображается во время 2-го прохода.
+- При повторном резервном копировании сокращает размер резервной
+копии и время работы за счет фукнции "дедупликация"
+работающей на современных файловых системах. Успешно
+работает на файловых системах Ext3/Ext4/NTFS (через
+использование опции "жесткая ссылка"). Не будет работать,
+в частности, если файловая система из семейства FAT.
+- Используется улучшенная библиотека GOTK3+ (библиотека привязки
+к GTK+) для графического интерейса приложения.
+"""
+
+[AboutDlgAppDescriptionSection]
+description = "AboutDialog application section text"
+other = """
+Лучшая GTK+ оболочка для гениальной утилиты RSYNC.
+Простое в использовании приложение резервного
+копирования с инновационным подходом.
+"""
+
+[AboutDlgReleasedUnderLicense]
+description = "License application released under"
+other = "Выпущено под лицензией {{.LicenseName}}."
+
+[AboutDlgFollowMyGithubProjectTitle]
+description = "AboutDialog my github project title"
+other = "Вы можете найти мои golang проекты на GitHub:"
+
+[AboutDlgAppCopyright]
+description = "Application copyright line"
+other = "Copyright {{.AppCreationYears}} {{.AppCopyrightAuthor}}"
+
+[AboutDlgAppAuthorsBlock]
+description = "Application authors block"
+other = """
+Автор Денис Дьяков <denis.dyakov@gmail.com>
+"""
+
+[AboutDlgDoNotShowCaption]
+other = "Не показывать это окно при запуске приложения"
+
+
+#----------------------------------------------------
+# Preference dialog translations
+#----------------------------------------------------
+
+[PrefDlgGeneralUserInterfaceOptionsSecion]
+description = "Options section title"
+other = "Настройки графического интерейса"
+
+[PrefDlgGeneralBackupSettingsSection]
+description = "Options section title"
+other = "Настройки резервного копирования"
+
+[PrefDlgAdvancedRsyncDedupSettingsSection]
+description = "Options section title"
+other = "Настройки \"дедупликации\""
+
+[PrefDlgAdvansedRsyncSettingsSection]
+description = "Options section title"
+other = "Настройки утилиты RSYNC"
+
+[PrefDlgAdvancedBackupSettingsSection]
+description = "Options section title"
+other = "Настройки резервного копирования"
+
+[PrefDlgAdvancedRsyncFileTransferOptionsSection]
+description = "Options section title"
+other = "Настройки переноса данных утилиты RSYNC"
+
+[PrefDlgDoNotShowAtAppStartupCaption]
+other = "Не показывать окно \"О приложении\"\nпри запуске приложения"
+
+[PrefDlgDoNotShowAtAppStartupHint]
+other = "Не показывать окно \"О приложении\" с общей информацией при запуске приложения."
+
+[PrefDlgSessionLogControlFontSizeCaption]
+other = "Размер шрифта для элемента \"Лог сессии\""
+
+[PrefDlgSessionLogControlFontSizeHint]
+other = "Задать размер шрифта для графического элемента \"Лог сессии\", чтобы облегчить восприятие данных."
+
+[PrefDlgSourcesCaption]
+other = "Источники"
+
+[PrefDlgSourceRsyncPathCaption]
+other = "Источник данных RSYNC"
+
+[PrefDlgSourceRsyncPathRetryHint]
+other = "Нажмите для проверки доступности источника данных RSYNC."
+
+[PrefDlgSourceRsyncPathDescriptionHint]
+other = "Укажите источник данных RSYNC, который должен начинаться с \"rsync://\"."
+
+[PrefDlgSourceRsyncPathNotValidatedHint]
+other = "Не верифицируется (отключен)"
+
+[PrefDlgSourceRsyncPathEmptyError]
+other = "Источник данных RSYNC не может быть представлен пустой строкой"
+
+[PrefDlgSourceRsyncValidatingHint]
+other = "Источник данных проверяется... Это может занять некоторое время"
+
+[PrefDlgDestinationSubpathCaption]
+other = "Место хранения (доп. путь)"
+
+[PrefDlgDestinationSubpathHint]
+other = "Дополнительный путь добавленный к основному пути в файловой системе, где будут храниться данные полученные из источника данных RSYNC. Помните, что в случае множественных источников RSYNC дополнительный путь для каждого источника должен отличаться от другого внутри одного профиля."
+
+[PrefDlgDestinationSubpathNotValidatedHint]
+other = "Не верифицируется (отключен)"
+
+[PrefDlgDestinationSubpathExpressionError]
+other = "Ошибка формата файлового пути. Возможно строка содержит некоторые запрещенные символы, вроде <>:\"|?*, или пустые имена папок"
+
+[PrefDlgDestinationSubpathNotUniqueError]
+other = "Дополнительный путь для каждого источника должен отличаться от другого внутри одного профиля"
+
+[PrefDlgEnableBackupBlockCaption]
+other = "Включен"
+
+[PrefDlgEnableBackupBlockHint]
+other = "Включать/исключать текущий блок из процесса резервного копирования. Вы можете использовать эту опцию для временного отключения процесса резервного копирования для текущего источника данных, если вы не собираетесь удалить его полностью."
+
+[PrefDlgDeleteBackupBlockCaption]
+other = "Удалить"
+
+[PrefDlgDeleteBackupBlockHint]
+other = "Удалить текущий блок источника данных RSYNC и места хранения"
+
+[PrefDlgProfileNameCaption]
+other = "Имя профиля"
+
+[PrefDlgProfileNameHint]
+other = "Публичное имя профиля."
+
+[PrefDlgProfileNameExistsWarning]
+other = "Профиль с именем \"{{.ProfileName}}\" уже существует. Пожалуйста скорректируйте имя"
+
+[PrefDlgProfileNameEmptyWarning]
+other = "Имя профиля не может быть пустым. Пожалуйста скорректируйте имя"
+
+[PrefDlgDefaultDestPathCaption]
+other = "Место хранения (по умолчанию)"
+
+[PrefDlgDefaultDestPathHint]
+other = "Путь в файловой системе используемый как место хранения данных, заданный по умолчанию."
+
+[PrefDlgSkipFolderBackupFileSignatureCaption]
+other = "Имя файла для исключения резервного\nкопирования директории"
+
+[PrefDlgSkipFolderBackupFileSignatureHint]
+other = "Если файл с таким именем найден в директории, то содержимое директории не копируется (включая все поддиректории). Если вы не хотите выполнять резервное копирование определенных директорий, просто создайте пустой файл с соответствующим именем в нужном месте."
+
+[PrefDlgPerformDesktopNotificationCaption]
+other = "Выводить уведомление о завершении работы"
+
+[PrefDlgPerformDesktopNotificationHint]
+other = "Показывать уведомление о завершении процесса резервного копирования."
+
+[PrefDlgRunNotificationScriptCaption]
+other = "Запускать сприпт-уведомление по завершению работы"
+
+[PrefDlgRunNotificationScriptHint]
+other = """Запускать скрипт-уведомление \"/etc/gorsync/notification.sh\" (если существует) по завершению процесса резервного копирования.
+Следующие переменные создаются и передаются в окружение скрипта:
+- BACKUP_STATUS: итоговый статус резервного копирования. Может принимать значения 'terminated', 'failed', 'done', 'done_with_errors'.
+- SIZE_BACKEDUP_MB: полный размер данных, которые были успешно скоипированы в мегабайтах.
+- SIZE_FAILED_MB: размер данных, которые не были скопированы по причине ошибок в мегабайтах.
+- SIZE_SKIPPED_MB: размер данных, которые были проигнорированы при резервном копировании в мегабайтах.
+- TIME_TAKEN_SEC: время, которое заняло резервное копирование в секундах."""
+
+[PrefDlgAutoManageBackupBlockSizeCaption]
+other = "Автоматический выбор размера блока рез. копирования"
+
+[PrefDlgAutoManageBackupBlockSizeHint]
+other = "Автоматически выбирать размер блока резервного копирования выполняемого за один раз. Приложение разделяет процесс резервного копирования на блоки, пытаясь улучшить интерактивность процесса. Размер блока резервного копирования может повлиять на производительность резервного копирования."
+
+[PrefDlgBackupBlockSizeCaption]
+other = "Размер блока рез. копирования (в МБайт)"
+
+[PrefDlgBackupBlockSizeHint]
+other = "Размер блока резервного копирования (в МБайт) выполяемого за один раз. Приложение разделяет процесс резервного копирования на блоки, пытаясь улучшить интерактивность процесса. Размер блока резервного копирования может повлиять на производительность резервного копирования."
+
+[PrefDlgRsyncRetryCountCaption]
+other = "Количество повторных попыток запуска утилиты RSYNC"
+
+[PrefDlgRsyncRetryCountHint]
+other = "Количество повторных попыток запуска утилиты RSYNC в случае возникновения ошибок. Каждый отдельный вызов утилиты RSYNC будет обеспечен соответствующим числом повторных попыток в случае возникновения проблем."
+
+[PrefDlgRsyncLowLevelLogCaption]
+other = "Логировать вызовы утилиты RSYNC"
+
+[PrefDlgRsyncLowLevelLogHint]
+other = "Логировать вызовы утилиты RSYNC, сохраняя результаты в отдельный лог-файл."
+
+[PrefDlgRsyncIntensiveLowLevelLogCaption]
+other = "Подробно логировать вызовы утилиты RSYNC"
+
+[PrefDlgRsyncIntensiveLowLevelLogHint]
+other = "Сохранять всю детальную информацию о вызове утилиты RSYNC (включая консольный вывод STDOUT)."
+
+[PrefDlgUsePreviousBackupForDedupCaption]
+other = "Использовать предыдущие сессии резервного\nкопирования для \"дедупликации\""
+
+[PrefDlgUsePreviousBackupForDedupHint]
+other = "Каждая сессия резервного копирования будет пытаться найти и использовать предыдущии сессии. Если предыдущая сессии резервного копирования найдена, приложение передает эту информацию в утилиту RSYNC через параметр --link-dest, чтобы уменшить размер передаваемых данных (дополнительно это может сильно ускорять процесс резервного копирования). Настоятельно рекомендуется не отключать эту опцию."
+
+[PrefDlgNumberOfPreviousBackupToUseCaption]
+other = "Количество предыдущих резервных сессий\nразрешенных к использованию для \"дедупликации\""
+
+[PrefDlgNumberOfPreviousBackupToUseHint]
+other = "Количество предыдущих резервных сессий используемых для \"дедупликации\" превышающих 1, повышает шансы для \"дедупликации\"."
+
+[PrefDlgRsyncCompressFileTransferCaption]
+other = "Компрессировать переносимые данные"
+
+[PrefDlgRsyncCompressFileTransferHint]
+other = "Смотрите описание опции --compress утилиты RSYNC.\nС помощью этой опции RSYNC сжимает данные файла, когда они отправляются на конечный компьютер, что уменьшает количество передаваемых данных - что особенно полезно при медленном соединении (но помните, что это может повышать нагрузку на процессор системы - источника данных)."
+
+[PrefDlgRsyncTransferSourcePermissionsCaption]
+other = "Сохранять права доступа к файлам"
+
+[PrefDlgRsyncTransferSourcePermissionsHint]
+other = "Смотрите описание опции --perms утилиты RSYNC.\nЭтот параметр позволяет задать права доступа к файлам в месте хранения таким же образом, каким они были в источнике данных."
+
+[PrefDlgRsyncTransferSourceOwnerCaption]
+other = "Сохранять владельцев файлов"
+
+[PrefDlgRsyncTransferSourceOwnerHint]
+other = "Смотрите описание опции --owner утилиты RSYNC.\nЭтот параметр позволяет задать владельцев файлов в месте хранения таким же образом, каким они были в источнике данных, но только в случае запуска приложения с правами суперпользователя."
+
+[PrefDlgRsyncTransferSourceGroupCaption]
+other = "Сохранять группы доступа к файлам"
+
+[PrefDlgRsyncTransferSourceGroupHint]
+other = "Смотрите описание опции --group утилиты RSYNC.\nЭтот параметр позволяет задать группы доступа файлов в месте хранения таким же образом, каким они были в источнике данных. Если приложение запущено не с правами суперпользователя, то могут быть использованы только те группы, которые доступны пользователю из под которого запущено приложению."
+
+[PrefDlgRsyncRecreateSymlinksCaption]
+other = "Создавать символьные ссылки"
+
+[PrefDlgRsyncRecreateSymlinksHint]
+other = "Смотрите описание опции --links утилиты RSYNC.\nВоссоздает символьные ссылки в месте хранения, если таковые найдены в источнике данных."
+
+[PrefDlgRsyncTransferDeviceFilesCaption]
+other = "Копировать файлы устройств"
+
+[PrefDlgRsyncTransferDeviceFilesHint]
+other = "Смотрите описание опции --devices утилиты RSYNC.\nЭтот параметр разрешает RSYNC передавать файлы блочных устройства в удаленную систему для воссоздания этих устройств. Эта опция не действует, если принимающий RSYNC не запущен с правами суперпользователя."
+
+[PrefDlgRsyncTransferSpecialFilesCaption]
+other = "Копировать специальные файлы"
+
+[PrefDlgRsyncTransferSpecialFilesHint]
+other = "Смотрите описание опции --specials утилиты RSYNC.\nЭтот параметр разрешает RSYNC передавать специальные файлы, такие как именованные каналы и сокеты."
+
+[PrefDlgLanguageCaption]
+decsription = ""
+other = "Язык (требуется перезапуск приложения)"
+
+[PrefDlgLanguageHint]
+decsription = ""
+other = "Язык интерфейса приложения. Может выбираться автоматически (в зависимости от системных настроек), либо указываться явно."
+
+[PrefDlgDefaultLanguageEntry]
+decsription = "Combo Box entry to specify language select by default"
+other = "<автоматически>"
+
+[PrefDlgAddBackupBlockHint]
+other = "Добавить новый источник данных RSYNC"
+
+[PrefDlgProfileConfigIssuesDetectedWarning]
+other = "Обнаружены проблемы с конфигурацией профиля. Проверьте настройки профиля."
+
+[PrefDlgPreferencesDialogCaption]
+other = "Настройки"
+
+[PrefDlgGeneralProfileTabName]
+other = "Профиль резервного копирования"
+
+[PrefDlgProfileTabName]
+other = "Профиль ({{.ProfileName}})"
+
+[PrefDlgGeneralTabName]
+other = "Общие"
+
+[PrefDlgAdvancedTabName]
+other = "Расширенные"
+
+[PrefDlgAddProfileHint]
+other = "Добавить профиль резервного копирования"
+
+[PrefDlgDeleteProfileHint]
+other = "Удалить профиль резервного копирования"
+
+[PrefDlgDeleteProfileDialogTitle]
+other = "Вы хотите удалить выбранный профиль?"
+
+[PrefDlgDeleteProfileDialogText]
+other = """Нажмите {{.YesButton}} для удаления профиля резервного копирования.
+"""
+
+[SchemaConfigDlgTitle]
+other = "Ошибка конфигурации schema settings"
+
+[SchemaConfigDlgNoSchemaFoundError]
+other = """Не обнаружено GLIB settings schema.
+Сделайте установку соответствующей xml-схемы и перезапустите приложение."""
+
+[SchemaConfigDlgSchemaDoesNotFoundError]
+other = """GLIB схема \"{{.SettingsID}}\" не обнаружена.
+Установите соответствующую xml-схему и перезапустите приложение."""
+
+[SchemaConfigDlgSchemaErrorAdvise]
+other = "Найдите и запустите сценарий \"{{.ScriptName}}\" взятый из исходных текстов приложения чтобы устранить проблему."
+
+
+#----------------------------------------------------
+# Application window translations
+#----------------------------------------------------
+
+[AppWindowAboutMenuCaption]
+other = "О приложении"
+
+[AppWindowPreferencesMenuCaption]
+other = "Настройки"
+
+[AppWindowPreferencesHint]
+other = "Показать настройки"
+
+[AppWindowQuitMenuCaption]
+other = "Выйти из приложения"
+
+[AppWindowRunBackupHint]
+other = "Запустить процесс резервного копирования"
+
+[AppWindowStopBackupHint]
+other = "Остановить процесс резервного копирования"
+
+[AppWindowProfileCaption]
+other = "Профиль резервного копирования"
+
+[AppWindowProfileHint]
+other = "Выберите профиль резервного копирования определенный в Настройках из выпадающего списка, прежде чем запустить процесс резервного копирования. Профиль содержит все необходимые настройки, включая источники резервного копирования RSYNC и места хранения данных."
+
+[AppWindowProfileBackupPlanInfoSourceCount]
+other = "Источников данных RSYNC:"
+
+[AppWindowProfileBackupPlanInfoTotalSize]
+other = "полный размер:"
+
+[AppWindowProfileBackupPlanInfoSkipSize]
+other = "размер пропуска:"
+
+[AppWindowProfileBackupPlanInfoDirectoryCount]
+other = "кол-во директорий:"
+
+[AppWindowInquiringProfileStatus]
+other = "Запрашиваем профиль \"{{.ProfileName}}\"... Пожалуйста ждите, это может занять некоторое время."
+
+[AppWindowNoneProfileEntry]
+other = "<не выбран>"
+
+[AppWindowDestPathCaption]
+other = "Место хранения данных"
+
+[AppWindowDestPathHint]
+other = "Место хранения данных полученных в процессе резервного копирования. Вы можете вручную изменить место хранения данных полученных из настроек профиля."
+
+[AppWindowDestPathIsValidStatusPart1]
+other = "Файловый путь"
+
+[AppWindowDestPathIsValidStatusPart2]
+other = "действителен"
+
+[AppWindowDestPathIsEmptyError1]
+other = "Файловый путь не задан. Установите файловый путь вручную, либо задайте его в профиле в меню Настройки."
+
+[AppWindowDestPathIsEmptyError2]
+other = "Файловый путь определяющий место хранения данных не задан. Укажите файловый путь для хранения данных резервного копирования."
+
+[AppWindowDestPathIsNotExistError]
+other = "Директория \"{{.FolderPath}}\" не существует, либо существуют проблемы с доступом к ней."
+
+[AppWindowDestPathIsNotExistAdvise]
+other = "Возможно, вам нужно подсоединить внешний USB-диск к компьютеру, и выбрать повторно нужный профиль."
+
+[AppWindowBackupProgressStartMessage]
+other = "Запуск процесса резервного копирования..."
+
+[AppWindowBackupProgressInquiringSourceID]
+other = "Запрос источника данных #{{.SourceID}}..."
+
+[AppWindowBackupProgressInquiringSourceDescription]
+other = "источник: \"{{.RsyncSource}}\""
+
+[AppWindowBackupProgressTimePassedSuffix]
+other = "прошло"
+
+[AppWindowBackupProgressETASuffix]
+other = "ожидается до окончания"
+
+[AppWindowBackupProgressSizeCompletedSuffix]
+other = "обработано"
+
+[AppWindowBackupProgressSizeLeftToProcessSuffix]
+other = "осталось обработать"
+
+[AppWindowBackupProgressCompleted]
+other = "Успешно завершено!"
+
+[AppWindowBackupProgressCompletedWithErrors]
+other = "Завершено с ошибками!"
+
+[AppWindowBackupProgressTerminated]
+other = "Прервано!"
+
+[AppWindowBackupProgressFailed]
+other = "Закончилось неудачей!"
+
+[AppWindowOverallProgressCaption]
+other = "Общий прогресс"
+
+[AppWindowProgressStatusCaption]
+other = "Статус прогресса"
+
+[AppWindowSessionLogCaption]
+other = "Лог сессии"
+
+[AppWindowCannotStartBackupProcessTitle]
+other = "Не возможно начать процесс резервного копирования"
+
+[AppWindowTerminateBackupDlgTitle]
+other = "Прервать процесс резервного копирования?"
+
+[AppWindowTerminateBackupDlgText]
+other = """ 
+Нажмите {{.TerminateButton}} для остановки процесса резервного копирования.
+Нажмите клавишу {{.EscapeKey}} либо {{.ContinueButton}} для продолжения.
+"""
+
+[AppWindowTerminateBackupDlgTerminateButton]
+other = "ПРЕРВАТЬ"
+
+[AppWindowTerminateBackupDlgContinueButton]
+other = "ПРОДОЛЖИТЬ"
+
+[AppWindowOutOfSpaceDlgTitle]
+other = "Обнаружена нехватка дискового пространства"
+
+[AppWindowOutOfSpaceDlgText1]
+other = """
+По файловому пути \"{{.Path}}\" закончилось место: осталось {{.FreeSpace}}."""
+
+[AppWindowOutOfSpaceDlgText2]
+other = """ 
+Освободите место и нажмите {{.RetryButton}} для новой попытки резервного копирования.
+Нажмите клавишу {{.EscapeKey}} либо {{.IgnoreButton}} чтобы не пытаться исправить ошибку, но продолжить резервное копирования.
+Нажмите {{.TerminateButton}} для остановки процесса резервного копирования."""
+
+[AppWindowOutOfSpaceDlgIgnoreButton]
+other = "ПРОИГНОРИРОВАТЬ"
+
+[AppWindowOutOfSpaceDlgRetryButton]
+other = "ПОВТОРИТЬ"
+
+[AppWindowOutOfSpaceDlgTerminateButton]
+other = "ПРЕРВАТЬ"
+
+[AppWindowRsyncUtilityDlgTitle]
+other = "Утилита RSYNC не обранужена"
+
+[AppWindowRsyncUtilityDlgNotFoundError]
+other = """Тестовый вызов утилиты RSYNC провален.
+Устанровите утилиту RSYNC и запустите приложение повторно."""
+
+[AppWindowShowNotificationError]
+other = "Невозможно показать уведомление о завершении: {{.Error}}"
+
+[AppWindowRunNotificationScriptError]
+other = "Невозможно запустить скрипт-уведомление: {{.Error}}"
+
+[AppWindowNotificationScriptExecutableError]
+other = "Невозможно запустить скрипт-уведомление \"{{.ScriptPath}}\" поскольку он не является исполняемым"
+
+[AppWindowGetExecutableScriptInfoError]
+other = "Невозможно получить информацию о скрипте-уведомлении: {{.Error}}"
+
+[GeneralHintStatusCaption]
+other = "Статус:"
+
+[GeneralHintDescriptionCaption]
+other = "Описание:"
+
+
+#----------------------------------------------------
+# Log translations
+#----------------------------------------------------
+
+[LogPlanStageStarting]
+other = "Запуск стадии планирования..."
+
+[LogPlanStageStartTime]
+other = "Время начала: {{.Time}}"
+
+[LogPlanStageEndTime]
+other = "Время окончания: {{.Time}}"
+
+[LogPlanStartIterateViaNSources]
+description = "Plural case"
+one = "Перебор {{.SourceCount}} источника данных RSYNC для определения структуры и объема данных..."
+few = "Перебор {{.SourceCount}} источников данных RSYNC для определения структуры и объема данных..."
+many = "Перебор {{.SourceCount}} источников данных RSYNC для определения структуры и объема данных..."
+
+[LogPlanStageInquirySource]
+other = "Запрос информации об источнике данных #{{.SourceID}} \"{{.Path}}\""
+
+[LogPlanStageSourceFolderCountInfo]
+description = "Plural case"
+one = "{{.FolderCount}} директория найдена"
+few = "{{.FolderCount}} директории найдено"
+many = "{{.FolderCount}} директорий найдено"
+
+[LogPlanStageSourceSkipFolderCountInfo]
+description = "Plural case"
+one = "где {{.SkipFolderCount}} директория будет пропущена"
+few = "где {{.SkipFolderCount}} директорий будет пропущено"
+many = "где {{.SkipFolderCount}} директорий будет пропущено"
+
+[LogPlanStageSourceTotalSizeInfo]
+other = "с полным размером {{.TotalSize}} для обработки"
+
+[LogPlanStageUseTemporaryFolder]
+other = "Используем временную директорию для получения и оценки структуры данных: \"{{.Path}}\""
+
+[LogBackupStageStarting]
+other = "Запуск стадии резервного копирования..."
+
+[LogBackupStageStartTime]
+other = "Время начала: {{.Time}}"
+
+[LogBackupStageEndTime]
+other = "Время окончания: {{.Time}}"
+
+[LogBackupStageBackupToDestination]
+other = "Копируем данные в директорию: \"{{.Path}}\""
+
+[LogBackupStagePreviousBackupDiscoveryPermissionError]
+other = "Ошибка чтения директории \"{{.Path}}\": нет доступа"
+
+[LogBackupStagePreviousBackupDiscoveryOtherError]
+other = "Ошибка чтения директории \"{{.Path}}\": {{.Error}}"
+
+[LogBackupStagePreviousBackupFoundAndWillBeUsed]
+other = "Предыдущая сессия резервного копирования обнаружена (и будет использована) в \"{{.Path}}\":"
+
+[LogBackupStagePreviousBackupFoundButDisabled]
+other = "Предыдущая сессия резервного копирования обнаружена (но отключена для использования) в \"{{.Path}}\":"
+
+[LogBackupStagePreviousBackupNotFound]
+other = "Не обнаружено предыдущих сессий резервного копирования (не ожидается ни ускорения в работе резервного копирования, ни экономии места)"
+
+[LogBackupStageStartToBackupFromSource]
+other = "Начало копирования данных из источника #{{.SeqID}}: {{.RsyncSource}}"
+
+[LogBackupStageRenameDestination]
+other = "Переименовываем директорию куда сохранены данные в: \"{{.Path}}\""
+
+[LogBackupStageFailedToCreateFolder]
+other = "ошибка при создании директории \"{{.Path}}\": {{.Error}}"
+
+[LogBackupDetectedTotalBackupSizeGetChanged]
+other = "Обнаружено, что изначально установленный размер данных резервного копирования изменился в процессе."
+
+[LogBackupStageProgressBackupSuccess]
+other = "{{.SizeLeft}}, {{.TimeLeft}} осталось, {{.BackupAction}}: {{.FolderPath}}"
+
+[LogBackupStageProgressBackupError]
+other = "{{.Error}} при копировании {{.Size}} в {{.FolderPath}}"
+
+[LogBackupStageProgressSkipBackupError]
+other = "{{.Error}} при пропуске копирования {{.Size}} в {{.FolderPath}}"
+
+[LogBackupStageCriticalError]
+other = "Критическая проблема: {{.Error}}"
+
+[LogBackupStageOutOfSpaceWarning]
+other = "Закончилось дисковое пространство в месте хранения данных, осталось {{.SizeLeft}}"
+
+[LogBackupStageDiscoveringPreviousBackups]
+other = "Поиск предыдущих сессий резервного копирования..."
+
+[LogBackupStageRecoveredFromError]
+other = "Устранена временная проблема \"{{.Error}}\""
+
+[LogBackupStageSaveRsyncExtraLogTo]
+other = "Дополнительный лог утилиты RSYNC сохранен в: \"{{.Path}}\""
+
+[LogBackupStageSaveLogTo]
+other = "Этот лог сохранен в: \"{{.Path}}\""
+
+[LogBackupStageExitMessage]
+description = "Let's put here lovely russian mem ;)"
+other = "Вы держитесь здесь, вам всего доброго, хорошего настроения и здоровья..."
+
+[LogStatisticsSummaryCaption]
+other = "Итог:"
+
+[LogStatisticsEnvironmentCaption]
+other = "Окружение:"
+
+[LogStatisticsResultsCaption]
+other = "Результаты:"
+
+[LogStatisticsStatusCaption]
+other = "Статус:"
+
+[LogStatisticsStatusSuccessfullyCompleted]
+other = "Успешно завершено"
+
+[LogStatisticsStatusCompletedWithErrors]
+other = "Завершено с ошибками"
+
+[LogStatisticsPlanStageCaption]
+other = "Стадия планирования:"
+
+[LogStatisticsPlanStageSourceToBackup]
+other = "Источник данных #{{.SeqID}} для копирования: {{.RsyncSource}}"
+
+[LogStatisticsPlanStageTotalSize]
+other = "Полный размер для копирования: {{.TotalSize}}"
+
+[LogStatisticsPlanStageFolderCount]
+other = "Полное количество директорий: {{.FolderCount}}"
+
+[LogStatisticsPlanStageFolderSkipCount]
+other = "Количество директорий для пропуска: {{.FolderCount}}"
+
+[LogStatisticsPlanStageTimeTaken]
+other = "Затрачено времени: {{.TimeTaken}}"
+
+[LogStatisticsBackupStageCaption]
+other = "Стадия резервного копирования:"
+
+[LogStatisticsBackupStageDestinationPath]
+other = "Файловый путь для хранения данных: \"{{.Path}}\""
+
+[LogStatisticsBackupStagePreviousBackupFound]
+other = "Предыдущая сессия резервного копирования найдена в \"{{.Path}}\":"
+
+[LogStatisticsBackupStagePreviousBackupFoundButDisabled]
+other = "Предыдущая сессия резервного копирования найдена (но отключена для использования) в \"{{.Path}}\":"
+
+[LogStatisticsBackupStageNoValidPreviousBackupFound]
+other = "Не обнаружено предыдущих сессий резервного копирования"
+
+[LogStatisticsBackupStageTotalSize]
+other = "Успешно скопировано: {{.TotalSize}}"
+
+[LogStatisticsBackupStageSkippedSize]
+other = "Пропущено: {{.SkippedSize}}"
+
+[LogStatisticsBackupStageFailedToBackupSize]
+other = "Не скопировано из-за ошибок: {{.FailedToBackupSize}}"
+
+[LogStatisticsBackupStageTimeTaken]
+other = "Затрачено времени: {{.TimeTaken}}"
+
+
+#----------------------------------------------------
+# Backup type translations
+#----------------------------------------------------
+
+[FolderBackupTypeSkipDescription]
+description = "Skip folder backup"
+other = "пропуск директории"
+
+[FolderBackupTypeRecursiveDescription]
+description = "Backup folder content recursively"
+other = "полное копирование"
+
+[FolderBackupTypeContentDescription]
+description = "Backup flat folder content (only files in it)"
+other = "копирование файлов"
+
+
+#----------------------------------------------------
+# Desktop notification translations
+#----------------------------------------------------
+
+[DesktopNotificationBackupSuccessfullyCompleted]
+other = "Рез. копирование \"{{.ProfileName}}\" успешно завершено"
+
+[DesktopNotificationBackupCompletedWithErrors]
+other = "Рез. копирование \"{{.ProfileName}}\" завершено с ошибками"
+
+[DesktopNotificationBackupTerminated]
+other = "Рез. копирование \"{{.ProfileName}}\" прервано"
+
+[DesktopNotificationBackupFailed]
+other = "Рез. копирование \"{{.ProfileName}}\" закончилось неудачей"
+
+[DesktopNotificationTotalSize]
+other = "Скопировано: {{.TotalSize}}."
+
+[DesktopNotificationSkippedSize]
+other = "Пропущено: {{.SkippedSize}}."
+
+[DesktopNotificationFailedToBackupSize]
+other = "Не скопировано: {{.FailedToBackupSize}}."
+
+[DesktopNotificationTimeTaken]
+other = "Заняло: {{.TimeTaken}}."
+
+
+#----------------------------------------------------
+# RSYNC translations
+#----------------------------------------------------
+
+[RsyncCallFailedError]
+other = "RSYNC завершился с ошибкой ({{.Description}}, код {{.ExitCode}})"
+
+[RsyncProcessTerminatedError]
+other = "работа приложения RSYNC принудительно завершена"
+
+[RsyncCannotFindFolderSizeOutputError]
+other = "невозможно обнаружить информацию о размере директории в выводе RSYNC"
+
+[RsyncCannotParseFolderSizeOutputError]
+other = "невозможно получить информацию о размере директории из вывода RSYNC \"{{.Text}}\""
+
+
+#----------------------------------------------------
+# Values translations
+#----------------------------------------------------
+
+[DaysLong]
+description = "Plural case"
+one = "день"
+few = "дня"
+many = "дней"
+
+[DaysShort]
+description = "Plural case"
+one = "день"
+few = "дня"
+many = "дней"
+
+[HoursLong]
+description = "Plural case"
+one = "час"
+few = "часа"
+many = "часов"
+
+[HoursShort]
+description = "Plural case"
+one = "ч"
+few = "ч"
+many = "ч"
+
+[MinutesLong]
+description = "Plural case"
+one = "минута"
+few = "минуты"
+many = "минут"
+
+[MinutesShort]
+description = "Plural case"
+one = "мин"
+few = "мин"
+many = "мин"
+
+[SecondsLong]
+description = "Plural case"
+one = "секунда"
+few = "секунды"
+many = "секунд"
+
+[SecondsShort]
+description = "Plural case"
+one = "сек"
+few = "сек"
+many = "сек"
+
+
+[BytesLong]
+description = "Plural case"
+one = "байт"
+few = "байта"
+many = "байтов"
+
+[BytesShort]
+description = "Plural case"
+one = "Б"
+few = "Б"
+many = "Б"
+
+[KiloBytesLong]
+description = "Plural case"
+one = "килобайт"
+few = "килобайта"
+many = "килобайтов"
+
+[KiloBytesShort]
+description = "Plural case"
+one = "кбайт"
+few = "кбайт"
+many = "кбайт"
+
+[MegaBytesLong]
+description = "Plural case"
+one = "мегабайт"
+few = "мегабайта"
+many = "мегабайтов"
+
+[MegaBytesShort]
+description = "Plural case"
+one = "Мбайт"
+few = "Мбайт"
+many = "Мбайт"
+
+[GigaBytesLong]
+description = "Plural case"
+one = "гигабайт"
+few = "гигабайта"
+many = "гигабайтов"
+
+[GigaBytesShort]
+description = "Plural case"
+one = "Гбайт"
+few = "Гбайт"
+many = "Гбайт"
+other = "Гбайт"
+
+[TeraBytesLong]
+description = "Plural case"
+one = "терабайт"
+few = "терабайта"
+many = "терабайта"
+
+[TeraBytesShort]
+description = "Plural case"
+one = "Тбайт"
+few = "Тбайт"
+many = "Тбайт"
+
+[PetaBytesLong]
+description = "Plural case"
+one = "петабайт"
+few = "петабайт"
+many = "петабайт"
+
+[PetaBytesShort]
+description = "Plural case"
+one = "Пбайт"
+few = "Пбайт"
+many = "Пбайт"
+
+[ExaBytesLong]
+description = "Plural case"
+one = "эксабайт"
+few = "эксабайт"
+many = "эксабайт"
+
+[ExaBytesShort]
+description = "Plural case"
+one = "Эбайт"
+few = "Эбайт"
+many = "Эбайт"
+
