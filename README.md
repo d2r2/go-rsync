@@ -84,7 +84,7 @@ Plans for next releases
 Short list of preliminary anticipated features for next releases:
 
 * More code comments and improved documentation.
-* Installation packages for all major linux distribution and repositories.
+* Installation packages in all major linux distribution repositories (precompiled linux packages already present).
 * Application console parameters. Perhaps some CLI modes.
 
 
