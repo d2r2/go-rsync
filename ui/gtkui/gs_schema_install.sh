@@ -36,11 +36,13 @@ for COMMAND in $COMMANDS; do
     i=$(( $i + 1 ))
 done
 
+SCRIPT_DIR=$(dirname "$0")
+
 echo "Installing gsettings schema to prefix ${PREFIX}"
 
 # Copy and compile schema
 echo "Copying and compiling schema..."
 install -d ${PREFIX}/share/glib-2.0/schemas
-install -m 644 gsettings/org.d2r2.gorsync.gschema.xml ${PREFIX}/share/glib-2.0/schemas/
+install -m 644 ${SCRIPT_DIR}/gsettings/org.d2r2.gorsync.gschema.xml ${PREFIX}/share/glib-2.0/schemas/
 glib-compile-schemas ${PREFIX}/share/glib-2.0/schemas/
 
