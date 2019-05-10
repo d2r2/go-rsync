@@ -9,8 +9,12 @@ import (
 
 type WriteLine func(line string) error
 
+// ProxyLog is used to substitute regular log console output
+// with output to the file, either to the GUI widget.
+// ProxyLog implements logger.PackageLog interface which
+// provide regular log methods.
 type ProxyLog struct {
-	log         logger.PackageLog
+	parent      logger.PackageLog
 	packageName string
 	packageLen  int
 	timeFormat  string
@@ -19,25 +23,17 @@ type ProxyLog struct {
 	customLogLevel  logger.LogLevel
 }
 
-// Static cast to verify that type implement interface
+// Static cast to verify that type implement specific interface
 var _ logger.PackageLog = &ProxyLog{}
 
-func NewProxyLog(child logger.PackageLog, packageName string, packageLen int,
+func NewProxyLog(parent logger.PackageLog, packageName string, packageLen int,
 	timeFormat string, writeLine WriteLine, customLogLevel logger.LogLevel) *ProxyLog {
 
-	v := &ProxyLog{log: child, packageName: packageName, packageLen: packageLen,
+	v := &ProxyLog{parent: parent, packageName: packageName, packageLen: packageLen,
 		timeFormat: timeFormat, customLogLevel: customLogLevel,
 		customWriteLine: writeLine}
 	return v
 }
-
-/*
-func (v *ProxyLog) FormatMessage(options logger.FormatOptions, level logger.LogLevel,
-	msg string, colored bool) string {
-
-	return v.log.FormatMessage(options, level, msg, colored)
-}
-*/
 
 func (v *ProxyLog) getFormat() logger.FormatOptions {
 	options := logger.FormatOptions{TimeFormat: v.timeFormat,
@@ -46,8 +42,8 @@ func (v *ProxyLog) getFormat() logger.FormatOptions {
 }
 
 func (v *ProxyLog) Printf(level logger.LogLevel, format string, args ...interface{}) {
-	if v.log != nil {
-		v.log.Printf(level, format, args...)
+	if v.parent != nil {
+		v.parent.Printf(level, format, args...)
 	}
 	if v.customWriteLine != nil && level <= v.customLogLevel {
 		msg := spew.Sprintf(format, args...)
@@ -55,14 +51,14 @@ func (v *ProxyLog) Printf(level logger.LogLevel, format string, args ...interfac
 		out := logger.FormatMessage(v.getFormat(), level, packageName, msg, false)
 		err := v.customWriteLine(out + fmt.Sprintln())
 		if err != nil {
-			v.log.Fatal(err)
+			v.parent.Fatal(err)
 		}
 	}
 }
 
 func (v *ProxyLog) Print(level logger.LogLevel, args ...interface{}) {
-	if v.log != nil {
-		v.log.Print(level, args...)
+	if v.parent != nil {
+		v.parent.Print(level, args...)
 	}
 	if v.customWriteLine != nil && level <= v.customLogLevel {
 		msg := fmt.Sprint(args...)
@@ -70,7 +66,7 @@ func (v *ProxyLog) Print(level logger.LogLevel, args ...interface{}) {
 		out := logger.FormatMessage(v.getFormat(), level, packageName, msg, false)
 		err := v.customWriteLine(out + fmt.Sprintln())
 		if err != nil {
-			v.log.Fatal(err)
+			v.parent.Fatal(err)
 		}
 	}
 }

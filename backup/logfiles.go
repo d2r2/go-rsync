@@ -8,6 +8,10 @@ import (
 	shell "github.com/d2r2/go-shell"
 )
 
+// LogFiles track log files during backup session.
+// Has functionality to relocate log files from
+// one storage to another: used when log files moved
+// from /tmp partition to permanent destination location.
 type LogFiles struct {
 	rootPath string
 	logs     map[string]*os.File
@@ -25,7 +29,7 @@ func (v *LogFiles) GetAppendFile(suffixPath string) (*os.File, error) {
 	}
 	file := v.logs[suffixPath]
 	if file == nil {
-		file, err = os.OpenFile(v.getFullPath(suffixPath), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+		file, err = os.OpenFile(v.getFullPath(suffixPath), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
 		if err != nil {
 			return nil, err
 		}
@@ -51,6 +55,10 @@ func (v *LogFiles) Close() error {
 	return nil
 }
 
+// ChangeRootPath relocate log files from one storage to another.
+// Used to move from 1st backup stage (plan stage) to 2nd (backup stage).
+// In 1st stage we keep log files in /tmp partition, in 2nd stage
+// we relocate and save them to destination location.
 func (v *LogFiles) ChangeRootPath(newRootPath string) error {
 	err := v.Close()
 	if err != nil {

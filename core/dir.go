@@ -33,6 +33,7 @@ type DirMetrics struct {
 // Dir is a "tree data structure" to describe folder's tree
 // received from the source in 1st pass of backup process to measure
 // counts/sizes and to predict time necessary for backup process (ETA).
+// https://en.wikipedia.org/wiki/Tree_(data_structure)
 type Dir struct {
 	Paths   SrcDstPath
 	Name    string
@@ -41,6 +42,9 @@ type Dir struct {
 	Metrics DirMetrics
 }
 
+// BuildDirTree scans and creates Dir object which reflects
+// real recursive directory structure defined by file system path
+// in paths argument.
 func BuildDirTree(paths SrcDstPath, ignoreBackupFileSigName string) (*Dir, error) {
 	info, err := os.Stat(paths.DestPath)
 	if err != nil {
@@ -69,10 +73,12 @@ func (v *Dir) GetIgnoreSize() FolderSize {
 }
 
 func (v *Dir) GetFullBackupSize() FolderSize {
+	// use nested call since it's recursive
 	return getFullBackupSize(v)
 }
 
 func (v *Dir) GetContentBackupSize() FolderSize {
+	// use nested call since it's recursive
 	return getContentBackupSize(v)
 }
 

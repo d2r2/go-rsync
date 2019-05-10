@@ -1,4 +1,5 @@
 [HelloWorld]
+description = "test entry"
 other = "Hello world !!!"
 
 
@@ -48,23 +49,22 @@ other = "Features and benefits:"
 [AboutDlgAppFeaturesAndBenefitsSection]
 description = "AboutDialog Features and Benefits section text"
 other = """
-- Multiple backup profiles can be created. Moreover, each profile
-can be configured to get data from multiple RSYNC sources.
+- Multiple backup profiles are supported. Moreover, each profile
+can be configured to get data from multiple RSYNC sources/modules.
 - 2-pass backup session approach to estimate optimal backup
 strategy and backup size in 1st pass. Display estimated
 time of completion in 2nd pass.
 - Demonstrate \"deduplication\" with repeated backup sessions
 on modern file systems. Works if backup destination is
-Ext3/Ext4/NTFS file system (employ file system hardlink
-feature). Wouldn't work if backup destination is
-FAT family, for instance.
-- Improved GOTK3+ library (GTK+ golang bindings) used for GUI.
+Ext3/Ext4/NTFS file system (employ file system
+hardlink feature).
+- Improved GOTK3 library (GTK+ golang bindings) used for GUI.
 """
 
 [AboutDlgAppDescriptionSection]
 description = "AboutDialog application section text"
 other = """
-Best GTK+ frontend for brilliant RSYNC console utility.
+GTK+ backup frontend for brilliant RSYNC console utility.
 Easy-to-use backup app with innovative approach.
 """
 
@@ -140,13 +140,13 @@ other = "Source RSYNC path"
 other = "Press to validate RSYNC source."
 
 [PrefDlgSourceRsyncPathDescriptionHint]
-other = "RSYNC source URL, which should start with \"rsync://\" prefix."
+other = "RSYNC source URL, which should start with \"rsync://\" prefix. URL may contains optional user between prefix and host \"rsync://[user@]host...\"."
 
 [PrefDlgSourceRsyncPathNotValidatedHint]
 other = "Not verified (disabled)"
 
 [PrefDlgSourceRsyncPathEmptyError]
-other = "RSYNC source path can not be empty"
+other = "RSYNC source path cannot be empty"
 
 [PrefDlgSourceRsyncValidatingHint]
 other = "Validating... This may take some time"
@@ -165,6 +165,24 @@ other = "Invalid file path expression. Perhaps path string contains some restric
 
 [PrefDlgDestinationSubpathNotUniqueError]
 other = "Each destination subpath should be unique for backup profile"
+
+[PrefDlgExtraOptionsBoxCaption]
+other = "     <<<<<     Extra options     >>>>>"
+
+[PrefDlgExtraOptionsBoxHint]
+other = "Click to show/hide additional settings to adjust this source backup process."
+
+[PrefDlgAuthPasswordCaption]
+other = "Authentication password"
+
+[PrefDlgAuthPasswordHint]
+other = "Enter password to get access to RSYNC source (module), which requires authentication. Current system user name will be used implicitly, either specify user explicitly in RSYNC source field using pattern: rsync://user@host/path."
+
+[PrefDlgChangeFilePermissionCaption]
+other = "Change file permission"
+
+[PrefDlgChangeFilePermissionHint]
+other = "See RSYNC --chmod option.\nThis option tells RSYNC to apply one or more comma-separated \"chmod\" modes to the permission of the files in the transfer. For example, such pattern as \"uo+rw,Duo+x\" will make the copied data \"relocatable\" subsequently, without message \"permission denied\"."
 
 [PrefDlgEnableBackupBlockCaption]
 other = "Active"
@@ -272,7 +290,7 @@ other = "See RSYNC --compress option.\nWith this option, RSYNC compresses the fi
 other = "Transfer source permissions"
 
 [PrefDlgRsyncTransferSourcePermissionsHint]
-other = "See RSYNC --perms option.\nThis option causes the receiving RSYNC to set the destination permissions to be the same as the source permissions."
+other = "See RSYNC --perms option.\nThis option causes the receiving RSYNC to set the destination permissions to be the same as the source permissions.\nNOTE: Remember, that changing this option between backup sessions may eliminate deduplication, even when backup data from previous backup sessions are present."
 
 [PrefDlgRsyncTransferSourceOwnerCaption]
 other = "Transfer source owner"
@@ -371,6 +389,9 @@ other = "Find and execute script \"{{.ScriptName}}\" from application sources to
 
 [AppWindowAboutMenuCaption]
 other = "About"
+
+[AppWindowHelpMenuCaption]
+other = "Help"
 
 [AppWindowPreferencesMenuCaption]
 other = "Preferences"
@@ -575,7 +596,7 @@ other = "where {{.SkipFolderCount}} folders will be skipped"
 other = "with total size of {{.TotalSize}} to process"
 
 [LogPlanStageUseTemporaryFolder]
-other = "Use temporary folder to get and analyze backup directory structure: \"{{.Path}}\""
+other = "Use temporary folder to analyze backup directory structure: \"{{.Path}}\""
 
 [LogBackupStageStarting]
 other = "Starting backup stage..."

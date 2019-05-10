@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/d2r2/go-rsync/core"
-	"github.com/d2r2/go-shell"
+	shell "github.com/d2r2/go-shell"
 )
 
 // RSYNC_CMD contains RSYNC console utility name to run.
@@ -25,7 +25,8 @@ func RunRsyncWithRetry(ctx context.Context, options *Options, log *Logging, stdO
 	}
 	index := 0
 	for {
-		err := runSystemRsync(ctx, options.Params, log, stdOut,
+		err := runSystemRsync(ctx, options.Password,
+			options.Params, log, stdOut,
 			paths.RsyncSourcePath, paths.DestPath)
 
 		if err == nil {
@@ -40,10 +41,12 @@ func RunRsyncWithRetry(ctx context.Context, options *Options, log *Logging, stdO
 			retryErr = err
 		}
 
+		// in case of error we are trying to recover from
+		// fail state via call to ErrorHook call-back function
 		if options != nil && options.ErrorHook != nil {
 			var newRetryLeft int
-			newRetryLeft, criticalErr = options.ErrorHook(err, paths,
-				options.PredictedSize, index, retryCount)
+			newRetryLeft, criticalErr = options.ErrorHook.Call(err, paths,
+				options.ErrorHook.PredictedSize, index, retryCount)
 			if criticalErr != nil {
 				break
 			}
@@ -107,8 +110,9 @@ func GetRsyncVersion() (version string, protocol string, err error) {
 // runSystemRsync run RSYNC utility.
 // Parameters:
 //	- Save console output to stdOut variable.
-func runSystemRsync(ctx context.Context, params []string, log *Logging,
-	stdOut *bytes.Buffer, source, dest string) error {
+func runSystemRsync(ctx context.Context, password *string,
+	params []string, log *Logging, stdOut *bytes.Buffer,
+	source, dest string) error {
 
 	var args []string
 	if params != nil {
@@ -116,6 +120,7 @@ func runSystemRsync(ctx context.Context, params []string, log *Logging,
 	}
 	args = append(args, source, dest)
 	stdOut2 := stdOut
+	stdErr := bytes.NewBuffer(nil)
 
 	var logBuf bytes.Buffer
 	logEnabled := false
@@ -127,12 +132,31 @@ func runSystemRsync(ctx context.Context, params []string, log *Logging,
 	}
 
 	app := shell.NewApp(RSYNC_CMD, args...)
+	/*
+		if user != nil {
+			app.AddEnvironments([]string{fmt.Sprintf("USER=%s", *user)})
+			lg.Debugf("USER: %v", *user)
+		}
+	*/
+	var passwd string
+	if password != nil {
+		passwd = *password
+	}
+	// always add password, even empty one, for protection for
+	// RSYNC module raise password input via stdin
+	app.AddEnvironments([]string{fmt.Sprintf("RSYNC_PASSWORD=%s", passwd)})
+	if passwd != "" {
+		lg.Debugf("PASSWD: %v", passwd)
+	}
 	lg.Debugf("Args: %v", args)
-	waitCh, err := app.Start(stdOut2, nil)
+	waitCh, err := app.Start(stdOut2, stdErr)
 	if err != nil {
 		return err
 	}
 
+	// stdOutLastLen := -1
+	// stdErrLastLen := -1
+	// for {
 	select {
 	case <-ctx.Done():
 		lg.Debugf("Killing rsync: %v", args)
@@ -159,8 +183,16 @@ func runSystemRsync(ctx context.Context, params []string, log *Logging,
 		if st.Error != nil {
 			return st.Error
 		} else if st.ExitCode != 0 {
-			return NewRsyncCallFailedError(st.ExitCode)
+			lg.Debugf("STDERR: %v", stdErr.String())
+			return NewRsyncCallFailedError(st.ExitCode, stdErr)
 		}
+		return nil
+		// case <-time.After(5 * time.Second):
+		// 	stdOutLastLen = stdOut2.Len()
+		// 	stdErrLastLen = stdErr.Len()
+		// 	lg.Debugf("stdOutLastLen=%v", stdOutLastLen)
+		// 	lg.Debugf("stdErrLastLen=%v", stdErrLastLen)
 	}
+	// }
 	return nil
 }

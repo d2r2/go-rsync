@@ -163,6 +163,14 @@
       <default>''</default>
     </key>
 
+    <key name="change-file-permission" type="s">
+      <default>''</default>
+    </key>
+
+    <key name="auth-password" type="s">
+      <default>''</default>
+    </key>
+
     <key name="source-dest-block-enabled" type="b">
       <default>true</default>
     </key>

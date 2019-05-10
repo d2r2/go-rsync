@@ -1,5 +1,13 @@
 package gtkui
 
+// ------------------------------------------------------------
+// File contains message identifiers for localization purpose.
+// Message identifier name's is self-descriptive, so ordinary
+// it's easy to understand what message is made for.
+// Message ID is used to call translation functions from
+// "locale" package.
+// ------------------------------------------------------------
+
 const (
 	MsgAppEnvironmentTitle = "AppEnvironmentTitle"
 	MsgGLIBInfo            = "GLIBInfo"
@@ -44,6 +52,13 @@ const (
 	MsgPrefDlgDestinationSubpathNotValidatedHint = "PrefDlgDestinationSubpathNotValidatedHint"
 	MsgPrefDlgDestinationSubpathExpressionError  = "PrefDlgDestinationSubpathExpressionError"
 	MsgPrefDlgDestinationSubpathNotUniqueError   = "PrefDlgDestinationSubpathNotUniqueError"
+
+	MsgPrefDlgExtraOptionsBoxCaption      = "PrefDlgExtraOptionsBoxCaption"
+	MsgPrefDlgExtraOptionsBoxHint         = "PrefDlgExtraOptionsBoxHint"
+	MsgPrefDlgAuthPasswordCaption         = "PrefDlgAuthPasswordCaption"
+	MsgPrefDlgAuthPasswordHint            = "PrefDlgAuthPasswordHint"
+	MsgPrefDlgChangeFilePermissionCaption = "PrefDlgChangeFilePermissionCaption"
+	MsgPrefDlgChangeFilePermissionHint    = "PrefDlgChangeFilePermissionHint"
 
 	MsgPrefDlgEnableBackupBlockCaption = "PrefDlgEnableBackupBlockCaption"
 	MsgPrefDlgEnableBackupBlockHint    = "PrefDlgEnableBackupBlockHint"
@@ -133,6 +148,7 @@ const (
 	MsgSchemaConfigDlgSchemaErrorAdvise       = "SchemaConfigDlgSchemaErrorAdvise"
 
 	MsgAppWindowAboutMenuCaption       = "AppWindowAboutMenuCaption"
+	MsgAppWindowHelpMenuCaption        = "AppWindowHelpMenuCaption"
 	MsgAppWindowPreferencesMenuCaption = "AppWindowPreferencesMenuCaption"
 	MsgAppWindowPreferencesHint        = "AppWindowPreferencesHint"
 	MsgAppWindowQuitMenuCaption        = "AppWindowQuitMenuCaption"

@@ -74,7 +74,7 @@ func getNonMeasuredDir(dir *core.Dir) *core.Dir {
 
 // measureLocalUpToRoot calculate "local size" metric for chain of parent folders
 // up to root, if not yet defined.
-func measureLocalUpToRoot(ctx context.Context, dir *core.Dir, retryCount *int, log *rsync.Logging) error {
+func measureLocalUpToRoot(ctx context.Context, password *string, dir *core.Dir, retryCount *int, log *rsync.Logging) error {
 	item := dir
 	for {
 		item = item.Parent
@@ -84,7 +84,7 @@ func measureLocalUpToRoot(ctx context.Context, dir *core.Dir, retryCount *int, l
 		var err error
 		size := item.Metrics.Size
 		if size == nil {
-			size, err = rsync.ObtainDirLocalSize(ctx, item, retryCount, log)
+			size, err = rsync.ObtainDirLocalSize(ctx, password, item, retryCount, log)
 			if err != nil {
 				return err
 			}
@@ -134,12 +134,12 @@ func findUpNonMeasuredDirByWeight(dir *core.Dir, weight int) *core.Dir {
 	}
 }
 
-func MeasureDir(ctx context.Context, dir *core.Dir, retryCount *int, log *rsync.Logging,
+func MeasureDir(ctx context.Context, password *string, dir *core.Dir, retryCount *int, log *rsync.Logging,
 	blockSize *backupBlockSizeSettings) (int, error) {
 
 	totalCount := 0
 	for {
-		found, count, err := searchDownOptimalDir(ctx, dir, retryCount, log, blockSize)
+		found, count, err := searchDownOptimalDir(ctx, password, dir, retryCount, log, blockSize)
 		if err != nil {
 			return 0, err
 		}
@@ -157,7 +157,7 @@ func MeasureDir(ctx context.Context, dir *core.Dir, retryCount *int, log *rsync.
 		}
 
 		markMesuredAll(found)
-		err = measureLocalUpToRoot(ctx, found, retryCount, log)
+		err = measureLocalUpToRoot(ctx, password, found, retryCount, log)
 		if err != nil {
 			return 0, err
 		}
@@ -195,11 +195,11 @@ func getRoot(dir *core.Dir) *core.Dir {
 }
 
 // calcFullSizesWithRoot calc "full size" metric for current folder and root, if not defined yet.
-func calcFullSizesWithRoot(ctx context.Context, dir *core.Dir, retryCount *int, log *rsync.Logging) (int, error) {
+func calcFullSizesWithRoot(ctx context.Context, password *string, dir *core.Dir, retryCount *int, log *rsync.Logging) (int, error) {
 	count := 0
 	root := getRoot(dir)
 	if root.Metrics.FullSize == nil {
-		fullSize, err := rsync.ObtainDirFullSize(ctx, root, retryCount, log)
+		fullSize, err := rsync.ObtainDirFullSize(ctx, password, root, retryCount, log)
 		if err != nil {
 			return 0, err
 		}
@@ -207,7 +207,7 @@ func calcFullSizesWithRoot(ctx context.Context, dir *core.Dir, retryCount *int, 
 		count++
 	}
 	if dir.Metrics.FullSize == nil {
-		fullSize, err := rsync.ObtainDirFullSize(ctx, dir, retryCount, log)
+		fullSize, err := rsync.ObtainDirFullSize(ctx, password, dir, retryCount, log)
 		if err != nil {
 			return 0, err
 		}
@@ -297,17 +297,17 @@ func calcOptimalBackupBlockSize(dir *core.Dir) uint64 {
 	const splitTo = 50
 	root := getRoot(dir)
 	bs := root.Metrics.FullSize.GetByteCount() / splitTo
-	if bs > core.MegabytesToBytes(5000) {
-		bs = core.MegabytesToBytes(5000)
-	} else if bs < core.MegabytesToBytes(300) {
-		bs = core.MegabytesToBytes(300)
+	if bs > 5*core.GB {
+		bs = 5 * core.GB
+	} else if bs < 300*core.MB {
+		bs = 300 * core.MB
 	}
 	return bs
 }
 
 // searchDownOptimalDir is a main recurrent function to find optimal (or close to optimal)
 // traverse path to backup source minimizing number of RSYNC utility calls.
-func searchDownOptimalDir(ctx context.Context, dir *core.Dir, retryCount *int, log *rsync.Logging,
+func searchDownOptimalDir(ctx context.Context, password *string, dir *core.Dir, retryCount *int, log *rsync.Logging,
 	blockSize *backupBlockSizeSettings) (*core.Dir, int, error) {
 
 	LocalLog.Debugf("Start searching optimal folder from root %v",
@@ -322,7 +322,7 @@ func searchDownOptimalDir(ctx context.Context, dir *core.Dir, retryCount *int, l
 
 	totalFullSizeCount := 0
 	if found != nil {
-		count, err := calcFullSizesWithRoot(ctx, found, retryCount, log)
+		count, err := calcFullSizesWithRoot(ctx, password, found, retryCount, log)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -359,14 +359,14 @@ func searchDownOptimalDir(ctx context.Context, dir *core.Dir, retryCount *int, l
 			if next == found {
 				return next, totalFullSizeCount, nil
 			} else {
-				count, err := calcFullSizesWithRoot(ctx, next, retryCount, log)
+				count, err := calcFullSizesWithRoot(ctx, password, next, retryCount, log)
 				if err != nil {
 					return nil, 0, err
 				}
 				totalFullSizeCount += count
 
 				if next.Metrics.FullSize.GetByteCount() > blockSize.BackupBlockSize {
-					next, count, err = searchDownOptimalDir(ctx, next, retryCount, log, blockSize)
+					next, count, err = searchDownOptimalDir(ctx, password, next, retryCount, log, blockSize)
 					if err != nil {
 						return nil, 0, err
 					}
@@ -386,14 +386,14 @@ func searchDownOptimalDir(ctx context.Context, dir *core.Dir, retryCount *int, l
 			LocalLog.Debugf("Get dir by depth %v starting from %q", depth, found.Paths.RsyncSourcePath)
 
 			next := findDownNonMeasuredDirByDepth(found, depth)
-			count, err := calcFullSizesWithRoot(ctx, next, retryCount, log)
+			count, err := calcFullSizesWithRoot(ctx, password, next, retryCount, log)
 			if err != nil {
 				return nil, 0, err
 			}
 			totalFullSizeCount += count
 			if next.Metrics.FullSize.GetByteCount() > blockSize.BackupBlockSize && len(next.Childs) > 0 {
 				next = selectChildByWeight(next)
-				next, count, err = searchDownOptimalDir(ctx, next, retryCount, log, blockSize)
+				next, count, err = searchDownOptimalDir(ctx, password, next, retryCount, log, blockSize)
 				if err != nil {
 					return nil, 0, err
 				}

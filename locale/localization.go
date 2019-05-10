@@ -11,8 +11,11 @@ import (
 	"golang.org/x/text/language"
 )
 
+// global variable to keep localizer object used to translate everything in application
 var Localizer *i18n.Localizer
 
+// One of 2 main methods to translate message ID text, using format
+// functionality based on template interface.
 var T = func(messageID string, template interface{}) string {
 	// if Localizer isn't initialized, set up with system language
 	if Localizer == nil {
@@ -25,6 +28,9 @@ var T = func(messageID string, template interface{}) string {
 	return msg
 }
 
+// One of 2 main methods to translate message ID text, using format
+// functionality based on template interface. Extra functionality
+// allow to control plural form behavior.
 var TP = func(messageID string, template interface{}, pluralCount interface{}) string {
 	// if Localizer isn't initialized, set up with system language
 	if Localizer == nil {
@@ -53,6 +59,7 @@ func mustParseMessageFile(bundle *i18n.Bundle, assetIconName string) {
 	bundle.MustParseMessageFileBytes(buf, assetIconName)
 }
 
+// SetLanguage set up language globally for application localization.
 func SetLanguage(lang string) {
 	bundle := &i18n.Bundle{DefaultLanguage: language.English}
 	bundle.RegisterUnmarshalFunc("toml", toml.Unmarshal)
@@ -61,7 +68,7 @@ func SetLanguage(lang string) {
 
 	if lang == "" {
 		lang = os.Getenv("LANG")
-		// remove UTF-8 suffix from language if found
+		// remove ".UTF-8" suffix from language if found, as "en-US.UTF-8"
 		if i := strings.Index(lang, ".UTF-8"); i != -1 {
 			lang = lang[:i]
 		}

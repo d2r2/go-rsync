@@ -916,6 +916,41 @@ func (v *SettingsArray) GetArrayIDs() []string {
 	return sources
 }
 
+// ControlWithStatus wraps control to the box to attach extra status widget to the left.
+// Status widget would be a error icon either spin control to show active process.
+type ControlWithStatus struct {
+	box       *gtk.Box
+	control   gtk.IWidget
+	statusBox *gtk.Box
+}
+
+func NewControlWithStatus(control gtk.IWidget) (*ControlWithStatus, error) {
+	box, err := gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 6)
+	if err != nil {
+		return nil, err
+	}
+	box.Add(control)
+	box.SetHExpand(true)
+	v := &ControlWithStatus{box: box, control: control}
+	return v, nil
+}
+
+func (v *ControlWithStatus) ReplaceStatus(statusBox *gtk.Box) {
+	if v.statusBox != nil {
+		v.statusBox.Destroy()
+		v.statusBox = nil
+	}
+	if statusBox != nil {
+		v.statusBox = statusBox
+		v.box.Add(statusBox)
+		v.box.ShowAll()
+	}
+}
+
+func (v *ControlWithStatus) GetBox() *gtk.Box {
+	return v.box
+}
+
 // ========================================================================================
 // ************************* GTK GUI UTILITIES SECTION END ********************************
 // ========================================================================================

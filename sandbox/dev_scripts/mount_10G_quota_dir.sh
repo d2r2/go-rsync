@@ -1,4 +1,4 @@
-#!/bin/env bash
+#!/usr/bin/env bash
 # Read this to create quota directory:
 # https://www.linuxquestions.org/questions/linux-server-73/directory-quota-601140/
 #

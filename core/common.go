@@ -3,10 +3,10 @@ package core
 import (
 	"fmt"
 
-	"github.com/d2r2/go-logger"
+	logger "github.com/d2r2/go-logger"
 )
 
-var lg = logger.NewPackageLogger("io",
+var lg = logger.NewPackageLogger("core",
 	// logger.DebugLevel,
 	logger.InfoLevel,
 )

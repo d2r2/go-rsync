@@ -21,15 +21,17 @@ import (
 	"github.com/davecgh/go-spew/spew"
 )
 
-// NotifierUI is a binding object, which connect
-// backup notification with GUI controls.
+// NotifierUI is an object, than bind backup process
+// notifications with application GUI controls.
 type NotifierUI struct {
 	profileName string
 	gridUI      *gtk.Grid
 	totalDone   core.FolderSize
-	progress    *float32
-	done        chan struct{}
-	// GTK widgets
+	// keep overall progress percentage
+	progress *float32
+	// flag informing that backup process is finalized in asynchronous GUI controls
+	done chan struct{}
+	// GUI GTK widgets
 	pbm         *ProgressBarManage
 	statusLabel *gtk.Label
 	logTextView *gtk.TextView
@@ -48,12 +50,12 @@ func (v *NotifierUI) Done() chan struct{} {
 	return v.done
 }
 
-func formatInqueryProgress(sourceId int, sourceRsync string) string {
+func formatInqueryProgress(sourceID int, sourceRsync string) string {
 	mp := NewMarkup(0, 0, 0, nil, nil,
-		NewMarkup(MARKUP_SIZE_LARGER, 0, 0, locale.T(MsgAppWindowBackupProgressInquiringSourceID, struct{ SourceID int }{
-			SourceID: sourceId + 1}), spew.Sprintln()),
-		NewMarkup(0, 0, 0, locale.T(MsgAppWindowBackupProgressInquiringSourceDescription, struct{ RsyncSource string }{
-			RsyncSource: sourceRsync}), nil),
+		NewMarkup(MARKUP_SIZE_LARGER, 0, 0, locale.T(MsgAppWindowBackupProgressInquiringSourceID,
+			struct{ SourceID int }{SourceID: sourceID + 1}), spew.Sprintln()),
+		NewMarkup(0, 0, 0, locale.T(MsgAppWindowBackupProgressInquiringSourceDescription,
+			struct{ RsyncSource string }{RsyncSource: sourceRsync}), nil),
 	)
 	return mp.String()
 }
@@ -75,6 +77,7 @@ func (v *NotifierUI) NotifyPlanStage_NodeStructureDoneInquiry(sourceID int,
 	return nil
 }
 
+// formatBackupProgress build markup text to detail progress status.
 func formatBackupProgress(backupType core.FolderBackupType, totalDone, leftToBackup core.FolderSize,
 	timePassed time.Duration, eta *time.Duration, path string) string {
 
@@ -96,18 +99,11 @@ func formatBackupProgress(backupType core.FolderBackupType, totalDone, leftToBac
 		NewMarkup(0, 0, 0, spew.Sprintf("%s: %q", backup.GetBackupTypeDescription(backupType), path),
 			nil),
 	)
-	/*
-		msg := spew.Sprintf("%s %s | %s %s\n%s %s | %s %s\n%s: %q",
-			MarkupTag("big", utils.FormatDurToDaysHoursMinsSecs(timePassed, &sections)), MarkupTag("span", "passed"),
-			MarkupTag("big", etaStr), MarkupTag("span", "ETA"),
-			MarkupTag("big", hum.Bytes(totalDone.GetByteCount())), MarkupTag("span", "done"),
-			MarkupTag("big", hum.Bytes(leftToBackup.GetByteCount())), MarkupTag("span", "left to backup"),
-			MarkupTag("span", backupStr), MarkupTag("span", path))
-	*/
 	return mp.String()
 }
 
 // NotifyBackupStage_FolderStartBackup implements core.BackupNotifier interface method.
+// Called by backup process when next piece of data backup started.
 func (v *NotifierUI) NotifyBackupStage_FolderStartBackup(rootDest string,
 	paths core.SrcDstPath, backupType core.FolderBackupType,
 	leftToBackup core.FolderSize,
@@ -129,6 +125,7 @@ func (v *NotifierUI) NotifyBackupStage_FolderStartBackup(rootDest string,
 }
 
 // NotifyBackupStage_FolderDoneBackup implements core.BackupNotifier interface method.
+// Called by backup process when next piece of data backup ended.
 func (v *NotifierUI) NotifyBackupStage_FolderDoneBackup(rootDest string,
 	paths core.SrcDstPath, backupType core.FolderBackupType,
 	leftToBackup core.FolderSize, sizeDone core.SizeProgress,
@@ -161,6 +158,7 @@ func (v *NotifierUI) NotifyBackupStage_FolderDoneBackup(rootDest string,
 	return err
 }
 
+// ClearProgressGrid remove and delete GTK widgets containing information about previous backup session.
 func (v *NotifierUI) ClearProgressGrid() error {
 	v.statusLabel = nil
 	if v.pbm != nil {
@@ -184,6 +182,7 @@ func (v *NotifierUI) ClearProgressGrid() error {
 	return nil
 }
 
+// CreateProgressControls create GTK widgets which will indicate backup session progress.
 func (v *NotifierUI) CreateProgressControls(sessionLogFontSize string) error {
 	row := 0
 	if v.pbm == nil {
@@ -323,6 +322,8 @@ textview {
 	return nil
 }
 
+// ScrollView scroll down multiline GTK widget, which keep backup session log data,
+// to show the most recent line.
 func (v *NotifierUI) ScrollView() error {
 	adj, err := v.logViewPort.GetVAdjustment()
 	if err != nil {
@@ -334,6 +335,7 @@ func (v *NotifierUI) ScrollView() error {
 	return nil
 }
 
+// addColorTags add special format tags to colorize TextView control.
 func addColorTags(buffer *gtk.TextBuffer) error {
 	table, err := buffer.GetTagTable()
 	if err != nil {
@@ -412,6 +414,7 @@ func addColorTags(buffer *gtk.TextBuffer) error {
 // 	return rexp, nil
 // }
 
+// getRuneIndex finds index of UTF-8 character by character byte offset in line string.
 func getRuneIndex(line string, byteOffset int) int {
 	runeIndex := 0
 	var index int
@@ -429,10 +432,13 @@ func getRuneIndex(line string, byteOffset int) int {
 	return -1
 }
 
+// lToU gets logger.LogLevel string representation and convert it to upper case.
 func lToU(level logger.LogLevel) string {
 	return strings.ToUpper(level.ShortStr())
 }
 
+// getLogEventsRegex recognize logger.LogLevel entry in backup session log line output
+// to colorize it in TextVide GTK widget.
 func getLogEventsRegex(events []struct {
 	Level   logger.LogLevel
 	TagName string
@@ -449,6 +455,8 @@ func getLogEventsRegex(events []struct {
 	return re
 }
 
+// addLineToBuffer get next log line received from backup session process
+// to process and display this line in application GUI.
 func (v *NotifierUI) addLineToBuffer(buffer *gtk.TextBuffer, line string) {
 	end := buffer.GetEndIter()
 	endOffset := end.GetOffset()
@@ -517,7 +525,7 @@ func (v *NotifierUI) addLineToBuffer(buffer *gtk.TextBuffer, line string) {
 }
 
 // UpdateTextViewLog add log line to the end of
-// Session Log control.
+// Session Log GTK widget.
 func (v *NotifierUI) UpdateTextViewLog(line string) error {
 	call := func() {
 		//if v.logTextView != nil {
@@ -568,8 +576,15 @@ func (v *NotifierUI) UpdateBackupProgress(progress *float32,
 	return nil
 }
 
+// BackupCompletionType signify all possible states of backup session completion.
 type BackupCompletionType int
 
+// It could be 4 possible exit status:
+// 1) backup failed (due to some issue recognized as critical);
+// 2) backup terminated by user or by system request;
+// 3) backup successfully completed without any issues;
+// 4) backup completed, but some data are not backed up
+// due to errors happened during backup process;
 const (
 	BackupFailed BackupCompletionType = iota
 	BackupTerminated
@@ -703,15 +718,15 @@ func buildEnvVars(completionType BackupCompletionType,
 	if backupProgress != nil {
 		if backupProgress.TotalProgress.Completed != nil {
 			vars = append(vars, fmt.Sprintf("SIZE_BACKEDUP_MB=%d",
-				backupProgress.TotalProgress.Completed.GetByteCount()/1000/1000))
+				backupProgress.TotalProgress.Completed.GetByteCount()/core.MB))
 		}
 		if backupProgress.TotalProgress.Failed != nil {
 			vars = append(vars, fmt.Sprintf("SIZE_FAILED_MB=%d",
-				backupProgress.TotalProgress.Failed.GetByteCount()/1000/1000))
+				backupProgress.TotalProgress.Failed.GetByteCount()/core.MB))
 		}
 		if backupProgress.TotalProgress.Skipped != nil {
 			vars = append(vars, fmt.Sprintf("SIZE_SKIPPED_MB=%d",
-				backupProgress.TotalProgress.Skipped.GetByteCount()/1000/1000))
+				backupProgress.TotalProgress.Skipped.GetByteCount()/core.MB))
 		}
 		timeTaken := backupProgress.GetTotalTimeTaken()
 		if timeTaken != time.Duration(0) {
@@ -739,7 +754,7 @@ func (v *NotifierUI) runNotificationScript(completionType BackupCompletionType,
 	return nil
 }
 
-// reportCompletion updates process state and progress bar progress.
+// reportCompletion updates backup process state and progress bar status.
 func (v *NotifierUI) ReportCompletion(progress float32, err error,
 	backupProgress *backup.Progress, async bool) {
 
@@ -806,7 +821,7 @@ func (v *NotifierUI) ReportCompletion(progress float32, err error,
 						struct{ Error error }{Error: err}))
 				}
 			}
-			// report about real completion via async method
+			// report about real completion via asynchronous method
 			close(v.done)
 		})
 		if err != nil {

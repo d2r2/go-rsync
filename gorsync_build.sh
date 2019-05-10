@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # Example showing use of getopt detection and use of GNU enhanced getopt
 # to handle arguments containing whitespace.
@@ -14,7 +14,7 @@
 # If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 
 PROG=$(basename $0)
-VERSION=v0.1
+VERSION=v0.2
 
 # Define default values, if parameters not specified
 RELEASE_TYPE="Release"
@@ -28,17 +28,19 @@ trap "echo $PROG: error encountered: aborted; exit 3" ERR
 
 ## Define options: trailing colon means has an argument (customize this: 1 of 3)
 
-SHORT_OPTS=b:h
-LONG_OPTS=buildtype:,version,help
+SHORT_OPTS=b:t:h
+LONG_OPTS=buildtype:,tags:,version,help
 
 SHORT_HELP="Usage: ${PROG} [options] arguments
 Options:
-  -b <build type>         Build type. Release type = [${RELEASE_TYPE}].
+  -b <build type>           Build type. Release type = ${RELEASE_TYPE}.
+  -t <golang tags>          Build tags.
   -h                        Show this help message."
 
 LONG_HELP="Usage: ${PROG} [options] arguments
 Options:
-  -b | --buildtype <build type>       Build type. Release type = [${RELEASE_TYPE}].
+  -b | --buildtype <build type>       Build type. Release type = ${RELEASE_TYPE}.
+  -t | --tags <golang tags>           Build tags.
   -h | --help                         Show this help message.
   --version                           Show version information."
 
@@ -75,25 +77,29 @@ eval set -- $ARGS
  
 while [ $# -gt 0 ]; do
     case "$1" in
-        -b | --buildtype)    BUILDTYPE="$2"; shift;;
-        -v | --verbose)  VERBOSE=yes;;
+        -b | --buildtype)   BUILDTYPE="$2"; shift;;
+        -t | --tags)        BUILDTAGS="$2"; shift;;
+        -v | --verbose)     VERBOSE=yes;;
         -h | --help)     if [ -n "$HAS_GNU_ENHANCED_GETOPT" ]
                          then echo "$LONG_HELP";
                          else echo "$SHORT_HELP";
-                         fi;  exit 0;;
-        --version)       echo "$PROG $VERSION"; exit 0;;
+                         fi;  exit 1;;
+        --version)       echo "$PROG $VERSION"; exit 1;;
         --)              shift; break;; # end of options
     esac
     shift
 done
 
 
-if [ "$BUILDTYPE" == "$RELEASE_TYPE" ]; then
-  echo "Release in progress..."
+shopt -s nocasematch
+if [[ "$BUILDTYPE" == "$RELEASE_TYPE" ]]; then
+  echo "Release type build in progress..."
   go run data/generate/generate.go && mv ./assets_vfsdata.go ./data
-  go build -v -ldflags="-X main.version=`head -1 version` -X main.buildnum=`date -u +%Y%m%d%H%M%S`" -tags gorsync_rel gorsync.go
+  go build -v -ldflags="-X main.version=`head -1 version` -X main.buildnum=`date -u +%Y%m%d%H%M%S`" -tags "gorsync_rel $BUILDTAGS" gorsync.go
 else
-  echo "Dev in progress..."
-  go build -v -ldflags="-X main.version=`head -1 version` -X main.buildnum=`date -u +%Y%m%d%H%M%S`" gorsync.go
+  [[ -z "$BUILDTYPE" ]] || [[ "$BUILDTYPE" == "$DEV_TYPE" ]] || echo "WARNING: unknown build type provided: $BUILDTYPE"
+  echo "Development type build in progress..."
+  go build -v -ldflags="-X main.version=`head -1 version` -X main.buildnum=`date -u +%Y%m%d%H%M%S`" -tags "$BUILDTAGS" gorsync.go
 fi
+shopt -u nocasematch
 

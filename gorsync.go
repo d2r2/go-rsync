@@ -10,7 +10,7 @@ import (
 )
 
 var lg = logger.NewPackageLogger("main",
-	//logger.DebugLevel,
+	// logger.DebugLevel,
 	logger.InfoLevel,
 )
 
@@ -26,23 +26,27 @@ func main() {
 
 	lg.Debugf("Version=%v", version)
 	lg.Debugf("Build number=%v", buildnum)
+	// save application version provided in compilation time
 	core.SetVersion(version)
 	core.SetBuildNum(buildnum)
-
+	// initialize default language first time; later it
+	// will be reinitialized from application preferences
 	locale.SetLanguage("")
+	// initialize libnotify subsystem
 	err := libnotify.Init(core.GetAppTitle())
 	if err != nil {
 		lg.Fatal(err)
 	}
-
+	// initialize GTK+ subsystem
 	gtk.Init(nil)
+	// create application
 	app, err := gtkui.CreateApp()
 	if err != nil {
 		lg.Fatal(err)
 	}
-
+	// run appliction
 	app.Run([]string{})
-
+	// uninitialize libnotify subsystem
 	libnotify.Uninit()
 
 }

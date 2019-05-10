@@ -4,12 +4,13 @@ import (
 	"context"
 	"errors"
 	"os"
+	"strings"
+	"sync"
 	"syscall"
 
 	logger "github.com/d2r2/go-logger"
 	"github.com/d2r2/go-rsync/backup"
 	"github.com/d2r2/go-rsync/core"
-	"github.com/d2r2/go-rsync/data"
 	"github.com/d2r2/go-rsync/locale"
 	"github.com/d2r2/go-rsync/rsync"
 	shell "github.com/d2r2/go-shell"
@@ -19,7 +20,7 @@ import (
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 )
 
-// createQuitAction creates regular exit app action.
+// createQuitAction creates exit app action.
 func createQuitAction(win *gtk.Window, backupSync *BackupSessionStatus, supplimentary *RunningContexts) (glib.IAction, error) {
 	act, err := glib.SimpleActionNew("QuitAction", nil)
 	if err != nil {
@@ -92,6 +93,30 @@ func createAboutAction(win *gtk.Window, appSettings *glib.Settings) (glib.IActio
 	return act, nil
 }
 
+// createHelpAction pop up default browser with URI link to project github README.md file.
+func createHelpAction(win *gtk.Window) (glib.IAction, error) {
+	act, err := glib.SimpleActionNew("HelpAction", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = act.Connect("activate", func(action *glib.SimpleAction, param *glib.Variant) {
+		name, state, err := GetActionNameAndState(action)
+		if err != nil {
+			lg.Fatal(err)
+		}
+		lg.Debugf("%v action activated with current state %v and args %v",
+			name, state, param)
+
+		ShowUri(win, "https://gorsync.github.io")
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return act, nil
+}
+
 // createMenuModelForPopover construct menu for popover button
 func createMenuModelForPopover() (glib.IMenuModel, error) {
 	main, err := glib.MenuNew()
@@ -108,6 +133,7 @@ func createMenuModelForPopover() (glib.IMenuModel, error) {
 		return nil, err
 	}
 	section.Append(locale.T(MsgAppWindowAboutMenuCaption, nil), "win.AboutAction")
+	section.Append(locale.T(MsgAppWindowHelpMenuCaption, nil), "win.HelpAction")
 	main.AppendSection("", section)
 
 	section, err = glib.MenuNew()
@@ -245,7 +271,7 @@ func createToolbar() (*gtk.Toolbar, error) {
 	return tbx, nil
 }
 
-// createPreferenceAction creates multi-page preference dialog
+// createPreferenceAction constructs multi-page preference dialog
 // with save/restore functionality to/from the GLib GSettings object.
 // Action activation require to have GLib Setting Schema
 // preliminary installed, otherwise will not work raising error.
@@ -332,11 +358,15 @@ func enableAction(win *gtk.ApplicationWindow, actionName string, enable bool) er
 	return nil
 }
 
+// EmptySpaceRecover used to try to recover from RSYNC critical error, caused
+// by out of space state. Main entry ErrorHook is trying heuristically
+// identify out of space symptoms and than check free space size.
 type EmptySpaceRecover struct {
 	main      *gtk.ApplicationWindow
 	backupLog logger.PackageLog
 }
 
+// ErrorHook is a main entry hook to recover from RSYNC out of space issue.
 func (v *EmptySpaceRecover) ErrorHook(err error, paths core.SrcDstPath, predictedSize *core.FolderSize,
 	repeated int, retryLeft int) (newRetryLeft int, criticalError error) {
 
@@ -347,19 +377,16 @@ func (v *EmptySpaceRecover) ErrorHook(err error, paths core.SrcDstPath, predicte
 			return retryLeft, err2
 		}
 
-		// if space/1000/1000 < 10 {
 		var predSize uint64
 		if predictedSize != nil {
 			predSize = predictedSize.GetByteCount()
 		}
 
-		const MB = 1000 * 1000
-
 		lg.Debugf("Exit code = %d, error = %v, predicted size = %d MB, retry left = %d, space left: %d kB",
-			erro.ExitCode, erro, predSize/1000/1000, retryLeft, freeSpace/1000)
+			erro.ExitCode, erro, predSize/core.MB, retryLeft, freeSpace/core.KB)
 
 		if (erro.ExitCode == 23 || erro.ExitCode == 11) &&
-			(predictedSize == nil && freeSpace < 1*MB || predictedSize.GetByteCount() > freeSpace) {
+			(predictedSize == nil && freeSpace < 1*core.MB || predictedSize.GetByteCount() > freeSpace) {
 
 			ch := make(chan OutOfSpaceResponse)
 			defer close(ch)
@@ -395,11 +422,11 @@ func (v *EmptySpaceRecover) ErrorHook(err error, paths core.SrcDstPath, predicte
 				return 0, nil
 			}
 		}
-		// }
 	}
 	return retryLeft, nil
 }
 
+// Monitor system signals to cancel context finally if signal raised.
 func traceLongRunningContext(ctx *ContextPack) chan struct{} {
 	// Build actual signals list to control
 	signals := []os.Signal{os.Kill}
@@ -412,7 +439,7 @@ func traceLongRunningContext(ctx *ContextPack) chan struct{} {
 }
 
 func performFullBackup(backupSync *BackupSessionStatus, notifier *NotifierUI,
-	win *gtk.ApplicationWindow, config *backup.Config, destPath string) {
+	win *gtk.ApplicationWindow, config *backup.Config, modules []backup.Module, destPath string) {
 
 	ctx := backupSync.Start()
 	done := traceLongRunningContext(ctx)
@@ -429,7 +456,7 @@ func performFullBackup(backupSync *BackupSessionStatus, notifier *NotifierUI,
 		}, logger.InfoLevel,
 	)
 
-	plan, progress, err := backup.BuildBackupPlan(ctx.Context, backupLog, config, notifier)
+	plan, progress, err := backup.BuildBackupPlan(ctx.Context, backupLog, config, modules, notifier)
 	if err == nil {
 		lg.Debugf("Backup node's dir trees: %+v", plan)
 
@@ -443,6 +470,8 @@ func performFullBackup(backupSync *BackupSessionStatus, notifier *NotifierUI,
 	}
 }
 
+// Enable/disable actions according to backup process status.
+// Actions in its turns associated with GTK widgets.
 func setControlStateOnBackupStarted(win *gtk.ApplicationWindow,
 	selectFolder *gtk.FileChooserButton, profile *gtk.ComboBox) {
 
@@ -462,6 +491,8 @@ func setControlStateOnBackupStarted(win *gtk.ApplicationWindow,
 	selectFolder.SetSensitive(false)
 }
 
+// Enable/disable actions according to backup process status.
+// Actions in its turns associated with GTK widgets.
 func setControlStateOnBackupEnded(win *gtk.ApplicationWindow, selectFolder *gtk.FileChooserButton,
 	profile *gtk.ComboBox, notifier *NotifierUI) {
 
@@ -522,7 +553,7 @@ func createRunBackupAction(win *gtk.ApplicationWindow, gridUI *gtk.Grid,
 				}
 				err = ErrorMessage(&win.Window, title, []*DialogParagraph{NewDialogParagraph(text)})
 			} else {
-				config, err := readBackupConfig(backupID)
+				config, modules, err := readBackupConfig(backupID)
 				if err != nil {
 					lg.Fatal(err)
 				}
@@ -558,7 +589,7 @@ func createRunBackupAction(win *gtk.ApplicationWindow, gridUI *gtk.Grid,
 
 				go func() {
 					// perform a full backup cycle in one closure
-					performFullBackup(backupSync, notifier, win, config, *destPath)
+					performFullBackup(backupSync, notifier, win, config, modules, *destPath)
 					// enable/disable corresponding UI elements
 					setControlStateOnBackupEnded(win, selectFolder, profile, notifier)
 				}()
@@ -651,14 +682,14 @@ func getProfileList() ([]struct{ value, key string }, error) {
 
 // readBackupConfig reads from app configuration Config object which
 // contains all settings necessary to run new backup session.
-func readBackupConfig(backupID string) (*backup.Config, error) {
+func readBackupConfig(backupID string) (*backup.Config, []backup.Module, error) {
 	appSettings, err := glib.SettingsNew(core.SETTINGS_ID)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	backupSettings, err := getBackupSettings(backupID, nil)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	sarr := NewSettingsArray(backupSettings, CFG_SOURCE_LIST)
 	sourceIDs := sarr.GetArrayIDs()
@@ -709,26 +740,33 @@ func readBackupConfig(backupID string) (*backup.Config, error) {
 	retry := appSettings.GetInt(CFG_RSYNC_RETRY_COUNT)
 	cfg.RsyncRetryCount = &retry
 
+	modules := []backup.Module{}
+
 	for _, sid := range sourceIDs {
 		sourceSettings, err := getBackupSourceSettings(backupID, sid, nil)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		if sourceSettings.GetBoolean(CFG_SOURCE_ENABLED) {
-			node := backup.BackupNode{}
-			node.SourceRsync = sourceSettings.GetString(CFG_SOURCE_RSYNC_SOURCE_PATH)
-			subpath := sourceSettings.GetString(CFG_SOURCE_DEST_SUBPATH)
-			node.DestSubPath = normalizeSubpath(subpath)
-			cfg.BackupNodes = append(cfg.BackupNodes, node)
+		if sourceSettings.GetBoolean(CFG_MODULE_ENABLED) {
+			module := backup.Module{}
+			module.SourceRsync = strings.TrimSpace(sourceSettings.GetString(CFG_MODULE_RSYNC_SOURCE_PATH))
+			subpath := sourceSettings.GetString(CFG_MODULE_DEST_SUBPATH)
+			module.DestSubPath = normalizeSubpath(subpath)
+			module.ChangeFilePermission = sourceSettings.GetString(CFG_MODULE_CHANGE_FILE_PERMISSION)
+			authPass := sourceSettings.GetString(CFG_MODULE_AUTH_PASSWORD)
+			if authPass != "" {
+				module.AuthPassword = &authPass
+			}
+			modules = append(modules, module)
 		}
 
 	}
 
-	return cfg, nil
+	return cfg, modules, nil
 }
 
 // getPlanInfoMarkup formats backup process totals.
-func getPlanInfoMarkup(plan *backup.BackupPlan) *Markup {
+func getPlanInfoMarkup(plan *backup.Plan) *Markup {
 	var sourceCount int = len(plan.Nodes)
 	var totalSize core.FolderSize
 	var ignoreSize core.FolderSize
@@ -872,6 +910,19 @@ func createBoxWithSpinner() (*gtk.Box, error) {
 	if err != nil {
 		return nil, err
 	}
+	css := `
+/***********
+ * Spinner *
+ ***********/
+spinner{
+/*    color: gold;*/
+	color: DarkCyan;
+}
+`
+	err = applyStyleCSS(&spinner.Widget, css)
+	if err != nil {
+		return nil, err
+	}
 	box, err := gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 0)
 	if err != nil {
 		return nil, err
@@ -881,12 +932,9 @@ func createBoxWithSpinner() (*gtk.Box, error) {
 	return box, nil
 }
 
-func updateDestPathWidget(destWidget *gtk.FileChooserButton, destFolderBox *gtk.Box, destFolderStatusBox **gtk.Box) error {
+func updateDestPathWidget(destWidget *gtk.FileChooserButton, destControl *ControlWithStatus) error {
 	destPath := destWidget.GetFilename()
-	if *destFolderStatusBox != nil {
-		(*destFolderStatusBox).Destroy()
-		*destFolderStatusBox = nil
-	}
+	destControl.ReplaceStatus(nil)
 	DEST_PATH_DESCRIPTION := locale.T(MsgAppWindowDestPathHint, nil)
 	if ok, msg := isDestPathError(destPath, false); ok {
 		destWidget.SetFilename("")
@@ -895,12 +943,11 @@ func updateDestPathWidget(destWidget *gtk.FileChooserButton, destFolderBox *gtk.
 		destWidget.SetTooltipMarkup(markup.String())
 		var err error
 		// *destFolderStatusBox, err = createBoxWithThemedIcon(STOCK_IMPORTANT_ICON)
-		*destFolderStatusBox, err = createBoxWithAssetIcon(ASSET_IMPORTANT_ICON)
+		statusBox, err := createBoxWithAssetIcon(ASSET_IMPORTANT_ICON)
 		if err != nil {
 			return err
 		}
-		destFolderBox.Add(*destFolderStatusBox)
-		destFolderBox.ShowAll()
+		destControl.ReplaceStatus(statusBox)
 	} else {
 		markup := markupTooltip(NewMarkup(0, 0, 0, nil, nil,
 			NewMarkup(0, MARKUP_COLOR_CHARTREUSE, 0,
@@ -914,12 +961,35 @@ func updateDestPathWidget(destWidget *gtk.FileChooserButton, destFolderBox *gtk.
 	return nil
 }
 
+// ProfileObjects keeps main form controls and settings
+// in one place to pass to the functions as single parameter.
+type ProfileObjects struct {
+	sync.Mutex
+	profileControl *ControlWithStatus
+	destControl    *ControlWithStatus
+	lastDestPath   string
+	reselect       chan struct{}
+}
+
+func (v *ProfileObjects) CheckAndClearReselect() bool {
+	select {
+	case <-v.reselect:
+		return true
+	default:
+	}
+	return false
+}
+
+func (v *ProfileObjects) SetReselect() {
+	v.reselect <- struct{}{}
+}
+
 func getProfileWidgetHint() string {
 	return locale.T(MsgAppWindowProfileHint, nil)
 }
 
-func performBackupPlanStage(ctx *ContextPack, supplimentary *RunningContexts, config *backup.Config,
-	cbProfile *gtk.ComboBox, cbProfileBox *gtk.Box, cbProfileStatusBox *gtk.Box) error {
+func (v *ProfileObjects) PerformBackupPlanStage(ctx *ContextPack, supplimentary *RunningContexts,
+	config *backup.Config, modules []backup.Module, cbProfile *gtk.ComboBox) error {
 
 	supplimentary.AddContext(ctx)
 	done := traceLongRunningContext(ctx)
@@ -929,13 +999,16 @@ func performBackupPlanStage(ctx *ContextPack, supplimentary *RunningContexts, co
 	backupLog := core.NewProxyLog(backup.LocalLog, "backup",
 		6, "15:04:05", nil, logger.InfoLevel)
 
-	plan, _, err2 := backup.BuildBackupPlan(ctx.Context, backupLog, config, nil)
+	v.Lock()
+	defer func() {
+		v.CheckAndClearReselect()
+		v.Unlock()
+	}()
+	v.CheckAndClearReselect()
+	plan, _, err2 := backup.BuildBackupPlan(ctx.Context, backupLog, config, modules, nil)
 	if err2 == nil || !rsync.IsRsyncProcessTerminatedError(err2) {
 		_, err := glib.IdleAdd(func() {
-			if cbProfileStatusBox != nil {
-				cbProfileStatusBox.Destroy()
-				cbProfileStatusBox = nil
-			}
+			var statusBox *gtk.Box
 			if err2 == nil {
 				lg.Debugf("%+v", plan)
 				markup := markupTooltip(getPlanInfoMarkup(plan), getProfileWidgetHint())
@@ -943,7 +1016,7 @@ func performBackupPlanStage(ctx *ContextPack, supplimentary *RunningContexts, co
 			} else {
 				msg := err2.Error()
 				var err error
-				cbProfileStatusBox, err = createBoxWithAssetIcon(ASSET_IMPORTANT_ICON)
+				statusBox, err = createBoxWithAssetIcon(ASSET_IMPORTANT_ICON)
 				if err != nil {
 					lg.Fatal(err)
 				}
@@ -951,20 +1024,21 @@ func performBackupPlanStage(ctx *ContextPack, supplimentary *RunningContexts, co
 					msg, nil), getProfileWidgetHint())
 				cbProfile.SetTooltipMarkup(markup.String())
 			}
-			if cbProfileStatusBox != nil {
-				cbProfileBox.Add(cbProfileStatusBox)
-				cbProfileBox.ShowAll()
-			}
+			v.profileControl.ReplaceStatus(statusBox)
 		})
 		if err != nil {
 			return err
 		}
 	} else {
-		_, err := glib.IdleAdd(func() {
-			cbProfile.SetActiveID("")
-		})
-		if err != nil {
-			return err
+		// if termination event is not raised by profile
+		// re-selection, then reset profile selection to None
+		if !v.CheckAndClearReselect() {
+			_, err := glib.IdleAdd(func() {
+				cbProfile.SetActiveID("")
+			})
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -1022,6 +1096,12 @@ func createMainForm(parent context.Context, cancel func(),
 	}
 	win.AddAction(act)
 
+	act, err = createHelpAction(&win.Window)
+	if err != nil {
+		return nil, err
+	}
+	win.AddAction(act)
+
 	hdr, err := createHeader(core.GetAppTitle(), core.GetAppExtraTitle(), true)
 	if err != nil {
 		return nil, err
@@ -1056,10 +1136,6 @@ func createMainForm(parent context.Context, cancel func(),
 	}
 	grid.Attach(lbl, 0, row, 1, 1)
 
-	cbProfileBox, err := gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 6)
-	if err != nil {
-		return nil, err
-	}
 	lst, err := getProfileList()
 	if err != nil {
 		return nil, err
@@ -1071,9 +1147,11 @@ func createMainForm(parent context.Context, cancel func(),
 	cbProfile.SetTooltipText(getProfileWidgetHint())
 	cbProfile.SetActiveID("")
 	cbProfile.SetHExpand(true)
-	cbProfileBox.Add(cbProfile)
-	cbProfileBox.SetHExpand(true)
-	grid.Attach(cbProfileBox, 1, row, 1, 1)
+	profileCtrl, err := NewControlWithStatus(cbProfile)
+	if err != nil {
+		return nil, err
+	}
+	grid.Attach(profileCtrl.GetBox(), 1, row, 1, 1)
 	row++
 
 	box2.Add(grid)
@@ -1110,10 +1188,6 @@ func createMainForm(parent context.Context, cancel func(),
 		return nil, err
 	}
 	grid.Attach(lbl, 0, row, 1, 1)
-	destFolderBox, err := gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 6)
-	if err != nil {
-		return nil, err
-	}
 	destFolder, err := gtk.FileChooserButtonNew("Select destination folder", gtk.FILE_CHOOSER_ACTION_SELECT_FOLDER)
 	if err != nil {
 		return nil, err
@@ -1122,35 +1196,35 @@ func createMainForm(parent context.Context, cancel func(),
 	destFolder.SetTooltipText(DEST_PATH_DESCRIPTION)
 	destFolder.SetHExpand(true)
 	destFolder.SetHAlign(gtk.ALIGN_FILL)
-	destFolderBox.Add(destFolder)
-	destFolderBox.SetHExpand(true)
-
-	grid.Attach(destFolderBox, 1, row, 1, 1)
+	destCtrl, err := NewControlWithStatus(destFolder)
+	if err != nil {
+		return nil, err
+	}
+	grid.Attach(destCtrl.GetBox(), 1, row, 1, 1)
 	grid.ShowAll()
 	row++
 
-	var cbProfileStatusBox *gtk.Box
-	var destFolderStatusBox *gtk.Box
-	var lastDestPath string
+	profileObjects := &ProfileObjects{profileControl: profileCtrl, destControl: destCtrl,
+		reselect: make(chan struct{}, 1)}
 
-	_, err = destFolder.Connect("file-set", func(dest *gtk.FileChooserButton, lastDestPath *string) {
+	_, err = destFolder.Connect("file-set", func(dest *gtk.FileChooserButton, profileObjects *ProfileObjects) {
 		destPath := dest.GetFilename()
 		//destFolder.SetTooltipText(destPath)
 
-		if *lastDestPath != destPath {
-			err := updateDestPathWidget(dest, destFolderBox, &destFolderStatusBox)
+		if profileObjects.lastDestPath != destPath {
+			err := updateDestPathWidget(dest, profileObjects.destControl)
 			if err != nil {
 				lg.Fatal(err)
 			}
-			*lastDestPath = destPath
-			lg.Debugf("file-set: assign last dest path to %q", *lastDestPath)
+			profileObjects.lastDestPath = destPath
+			lg.Debugf("file-set: assign last dest path to %q", profileObjects.lastDestPath)
 		}
-	}, &lastDestPath)
+	}, profileObjects)
 	if err != nil {
 		return nil, err
 	}
 
-	_, err = cbProfile.Connect("changed", func(profile *gtk.ComboBox, lastDestPath *string) {
+	_, err = cbProfile.Connect("changed", func(profile *gtk.ComboBox, profileObjects *ProfileObjects) {
 		cbProfile.SetTooltipText(getProfileWidgetHint())
 		backupID := profile.GetActiveID()
 		if backupID != "" {
@@ -1169,10 +1243,10 @@ func createMainForm(parent context.Context, cancel func(),
 			}
 			box3.SetSensitive(true)
 			destPath := backupSettings.GetString(CFG_PROFILE_DEST_ROOT_PATH)
-			*lastDestPath = destPath
-			lg.Debugf("changed: assign last dest path to %q", *lastDestPath)
+			profileObjects.lastDestPath = destPath
+			lg.Debugf("changed: assign last dest path to %q", profileObjects.lastDestPath)
 			destFolder.SetFilename(destPath)
-			err = updateDestPathWidget(destFolder, destFolderBox, &destFolderStatusBox)
+			err = updateDestPathWidget(destFolder, profileObjects.destControl)
 			if err != nil {
 				lg.Fatal(err)
 			}
@@ -1182,33 +1256,30 @@ func createMainForm(parent context.Context, cancel func(),
 				lg.Fatal(err)
 			}
 
-			if cbProfileStatusBox != nil {
-				cbProfileStatusBox.Destroy()
-				cbProfileStatusBox = nil
-			}
 			msg := locale.T(MsgAppWindowInquiringProfileStatus,
 				struct{ ProfileName string }{ProfileName: profileName})
 			markup := markupTooltip(NewMarkup(0, MARKUP_COLOR_SKY_BLUE, 0, msg, nil), getProfileWidgetHint())
 			cbProfile.SetTooltipMarkup(markup.String())
-			cbProfileStatusBox, err = createBoxWithSpinner()
+			statusBox, err := createBoxWithSpinner()
 			if err != nil {
 				lg.Fatal(err)
 			}
-			cbProfileBox.Add(cbProfileStatusBox)
-			cbProfileBox.ShowAll()
+			profileObjects.profileControl.ReplaceStatus(statusBox)
 
-			config, err := readBackupConfig(backupID)
+			config, modules, err := readBackupConfig(backupID)
 			if err != nil {
 				lg.Fatal(err)
 			}
 
+			profileObjects.SetReselect()
 			supplimentary.CancelAll()
 
 			go func() {
 				ctx := ForkContext(parent)
 
 				// perform backup plan stage in one closure
-				err := performBackupPlanStage(ctx, supplimentary, config, cbProfile, cbProfileBox, cbProfileStatusBox)
+				err := profileObjects.PerformBackupPlanStage(ctx, supplimentary,
+					config, modules, cbProfile)
 				if err != nil {
 					lg.Fatal(err)
 				}
@@ -1221,13 +1292,10 @@ func createMainForm(parent context.Context, cancel func(),
 				lg.Fatal(err)
 			}
 			supplimentary.CancelAll()
-			if cbProfileStatusBox != nil {
-				cbProfileStatusBox.Destroy()
-				cbProfileStatusBox = nil
-			}
+			profileObjects.profileControl.ReplaceStatus(nil)
 		}
 
-	}, &lastDestPath)
+	}, profileObjects)
 	if err != nil {
 		return nil, err
 	}
@@ -1263,7 +1331,7 @@ func createMainForm(parent context.Context, cancel func(),
 	win.AddAction(act)
 
 	act, err = createRunBackupAction(win, grid3,
-		&lastDestPath, destFolder, cbProfile, backupSync)
+		&profileObjects.lastDestPath, destFolder, cbProfile, backupSync)
 	if err != nil {
 		return nil, err
 	}
@@ -1284,12 +1352,13 @@ func createMainForm(parent context.Context, cancel func(),
 // CreateApp creates GtkApplication instance to run.
 func CreateApp() (*gtk.Application, error) {
 
-	file, err := data.Assets.Open("./ajax-loader-gears_32x32.gif")
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
+	/*
+		file, err := data.Assets.Open("./ajax-loader-gears_32x32.gif")
+		if err != nil {
+			return nil, err
+		}
+		defer file.Close()
+	*/
 	app, err := gtk.ApplicationNew(core.APP_ID, glib.APPLICATION_FLAGS_NONE)
 	if err != nil {
 		return nil, err
@@ -1363,6 +1432,7 @@ func CreateApp() (*gtk.Application, error) {
 	return app, nil
 }
 
+// GetLanguagePreference reads application language preference customized by user.
 func GetLanguagePreference() (string, error) {
 	appSettings, err := glib.SettingsNew(core.SETTINGS_ID)
 	if err != nil {

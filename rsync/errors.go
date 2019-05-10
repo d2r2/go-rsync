@@ -1,10 +1,15 @@
 package rsync
 
 import (
+	"bytes"
+	"regexp"
+	"strings"
+
 	"github.com/d2r2/go-rsync/core"
 	"github.com/d2r2/go-rsync/locale"
 )
 
+// RsyncProcessTerminatedError denote a situation with termination pending.
 type RsyncProcessTerminatedError struct {
 }
 
@@ -20,15 +25,44 @@ func IsRsyncProcessTerminatedError(err error) bool {
 	return false
 }
 
+// RsyncCallFailedError denote a situation when RSYNC execution
+// completed with non-zero exit code.
 type RsyncCallFailedError struct {
 	ExitCode    int
 	Description string
 }
 
-func NewRsyncCallFailedError(exitCode int) *RsyncCallFailedError {
+// extractError used to extract textual description of error
+// which improve understanding of error root cause.
+func extractError(stdErr *bytes.Buffer) string {
+	var descr string
+	buf := stdErr.String()
+	re := regexp.MustCompile(`(?m:^@ERROR:(?P<error>.*)$)`)
+	m := core.FindStringSubmatchIndexes(re, buf)
+	if len(m) > 0 {
+		grErr := "error"
+		if _, ok := m[grErr]; ok {
+			start := m[grErr][0]
+			end := m[grErr][1]
+			descr = strings.TrimSpace(buf[start:end])
+		}
+	}
+	return descr
+}
+
+// NewRsyncCallFailedError creates error object based on ExitCode from RSYNC.
+// Use STDERR variable to extract more human readable error description.
+func NewRsyncCallFailedError(exitCode int, stdErr *bytes.Buffer) *RsyncCallFailedError {
+	descr := extractError(stdErr)
+	if descr != "" {
+		descr += ", " + getRsyncExitCodeDesc(exitCode)
+	} else {
+		descr = getRsyncExitCodeDesc(exitCode)
+	}
+
 	v := &RsyncCallFailedError{
 		ExitCode:    exitCode,
-		Description: getRsyncExitCodeDesc(exitCode),
+		Description: descr,
 	}
 	return v
 }
@@ -49,7 +83,7 @@ func IsRsyncCallFailedError(err error) bool {
 	return false
 }
 
-// GetRsyncExitCodeDesc return rsync exit code descriptions
+// GetRsyncExitCodeDesc return RSYNC exit code descriptions
 // taken from here: http://wpkg.org/Rsync_exit_codes
 func getRsyncExitCodeDesc(exitCode int) string {
 	codes := map[int]string{
@@ -80,9 +114,6 @@ func getRsyncExitCodeDesc(exitCode int) string {
 	if v, ok := codes[exitCode]; ok {
 		return v
 	} else {
-		return f("Unknown rsync exit code: %d", exitCode)
+		return f("Undefined rsync exit code: %d", exitCode)
 	}
 }
-
-type ErrorHook func(err error, paths core.SrcDstPath, predictedSize *core.FolderSize,
-	repeated int, retryLeft int) (newRetryLeft int, criticalError error)
