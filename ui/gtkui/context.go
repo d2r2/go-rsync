@@ -5,22 +5,22 @@ import (
 	"sync"
 )
 
-// ContextPack keeps context with it cancel function.
+// ContextPack keeps cancellable context with its cancel function.
 type ContextPack struct {
 	Context context.Context
 	Cancel  func()
 }
 
-// ForkContext create child context from parent.
+// ForkContext create child context from the parent.
 func ForkContext(parent context.Context) *ContextPack {
 	child, cancel := context.WithCancel(parent)
 	v := &ContextPack{Context: child, Cancel: cancel}
 	return v
 }
 
-// RunningContexts keeps all currently started services,
-// preliminary added to the list, which we would like
-// to control, tracking and managing their states.
+// RunningContexts keeps all contexts of currently started services,
+// preliminary added to the list, which we would like to control,
+// tracking and managing their states.
 // All methods of RunningContexts type are thread-safe.
 type RunningContexts struct {
 	sync.RWMutex
@@ -106,14 +106,14 @@ func NewBackupSessionStatus(parent context.Context) *BackupSessionStatus {
 	return v
 }
 
-// Start forks new context for some thread.
+// Start forks new context for parent thread.
 func (v *BackupSessionStatus) Start() *ContextPack {
 	pack := ForkContext(v.parent)
 	v.running.AddContext(pack)
 	return pack
 }
 
-// IsRunning checks if any threads are alive.
+// IsRunning checks if any children threads are alive.
 func (v *BackupSessionStatus) IsRunning() bool {
 	return v.running.GetCount() > 0
 }

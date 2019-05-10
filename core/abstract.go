@@ -1,14 +1,22 @@
 package core
 
+// FolderBackupType define how
+// to backup folder content.
 type FolderBackupType int
 
 const (
+	// Undefined backup approach.
 	FBT_UNKNOWN FolderBackupType = iota
+	// Skip to backup folder content (including subfolders).
 	FBT_SKIP
+	// Backup full folder content including all subfolders.
 	FBT_RECURSIVE
+	// Backup only files located directly in the folder.
+	// Do not backup subfolders.
 	FBT_CONTENT
 )
 
+// String implement Stringer interface.
 func (v FolderBackupType) String() string {
 	var backupStr string
 	switch v {
@@ -18,10 +26,13 @@ func (v FolderBackupType) String() string {
 		backupStr = "full folder content"
 	case FBT_CONTENT:
 		backupStr = "folder files"
+	case FBT_UNKNOWN:
+		backupStr = "<undefined>"
 	}
 	return backupStr
 }
 
+// FolderSize used to signify size of backup objects.
 type FolderSize int64
 
 func NewFolderSize(size int64) FolderSize {
@@ -29,20 +40,18 @@ func NewFolderSize(size int64) FolderSize {
 	return v
 }
 
+// GetByteCount returns size of FolderSize in bytes.
 func (v FolderSize) GetByteCount() uint64 {
 	return uint64(v)
 }
 
-// func (v FolderSize) GetReadableSize() string {
-// 	str := humanize.Bytes(v.GetByteCount())
-// 	return str
-// }
-
+// Add combines sizes of two FolderSize objects.
 func (v FolderSize) Add(value FolderSize) FolderSize {
 	a := v + value
 	return a
 }
 
+// AddSizeProgress accumulate all sizes from SizeProgress with instance size.
 func (v FolderSize) AddSizeProgress(value SizeProgress) FolderSize {
 	var totalDone FolderSize
 	if value.Completed != nil {
@@ -58,64 +67,67 @@ func (v FolderSize) AddSizeProgress(value SizeProgress) FolderSize {
 	return a
 }
 
+// SizeProgress keeps all sizes which may arise during backup process.
 type SizeProgress struct {
+	// Completed signify successfully backed up size.
 	Completed *FolderSize
-	Skipped   *FolderSize
-	Failed    *FolderSize
+	// Skipped signify size that was skipped during backup process.
+	Skipped *FolderSize
+	// Failed signify size that was not backed up due to some issues.
+	Failed *FolderSize
 }
 
+// NewProgressCompleted creates the SizeProgress object
+// with the size that was successfully backed up.
 func NewProgressCompleted(size FolderSize) SizeProgress {
 	this := SizeProgress{Completed: &size}
 	return this
 }
 
+// NewProgressSkipped creates the SizeProgress object
+// with the size that was skipped.
 func NewProgressSkipped(size FolderSize) SizeProgress {
 	this := SizeProgress{Skipped: &size}
 	return this
 }
 
+// NewProgressSkipped creates the SizeProgress object
+// with the size that was not backed up due to some issues.
 func NewProgressFailed(size FolderSize) SizeProgress {
 	this := SizeProgress{Failed: &size}
 	return this
 }
 
-func (this *SizeProgress) Add(size SizeProgress) {
+// Add combines sizes of two SizeProgress objects.
+func (v *SizeProgress) Add(size SizeProgress) {
 	if size.Completed != nil {
-		if this.Completed == nil {
-			this.Completed = size.Completed
+		if v.Completed == nil {
+			v.Completed = size.Completed
 		} else {
-			done := *this.Completed + *size.Completed
-			this.Completed = &done
+			done := *v.Completed + *size.Completed
+			v.Completed = &done
 		}
 	}
 	if size.Skipped != nil {
-		if this.Skipped == nil {
-			this.Skipped = size.Skipped
+		if v.Skipped == nil {
+			v.Skipped = size.Skipped
 		} else {
-			done := *this.Skipped + *size.Skipped
-			this.Skipped = &done
+			done := *v.Skipped + *size.Skipped
+			v.Skipped = &done
 		}
 	}
 	if size.Failed != nil {
-		if this.Failed == nil {
-			this.Failed = size.Failed
+		if v.Failed == nil {
+			v.Failed = size.Failed
 		} else {
-			done := *this.Failed + *size.Failed
-			this.Failed = &done
+			done := *v.Failed + *size.Failed
+			v.Failed = &done
 		}
 	}
 }
 
-func (this *SizeProgress) GetTotal() FolderSize {
+// GetTotal gets total SizeProgress size.
+func (v *SizeProgress) GetTotal() FolderSize {
 	var total FolderSize
-	if this.Completed != nil {
-		total += *this.Completed
-	}
-	if this.Skipped != nil {
-		total += *this.Skipped
-	}
-	if this.Failed != nil {
-		total += *this.Failed
-	}
-	return total
+	return total.AddSizeProgress(*v)
 }

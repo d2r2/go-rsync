@@ -15,22 +15,36 @@ import (
 
 	logger "github.com/d2r2/go-logger"
 	"github.com/d2r2/go-rsync/locale"
+	"github.com/d2r2/go-rsync/rsync"
 )
 
+// NodeSignature keep RSYNC source path
+// crypted with hash function and destination subpath.
+// RSYNC source path crypted with hash function
+// is used as "source identifier" to search repeated
+// backup sessions to use for deduplication.
+// Content of this object is serialized to the file
+// stored in backup session root folder.
 type NodeSignature struct {
 	SourceRsyncCipher string
 	DestSubPath       string
 }
 
-func GetSignature(node BackupNode) NodeSignature {
-	sha := ChipherStr(normalizeRsync(node.SourceRsync))
-	signature := NodeSignature{SourceRsyncCipher: sha, DestSubPath: node.DestSubPath}
-	// lg.Debug(sha)
+// GetSignature builds NodeSignature object on the basis of BackupNodePath data.
+func GetSignature(module Module) NodeSignature {
+	signature := NodeSignature{SourceRsyncCipher: GenerateSourceID(module.SourceRsync),
+		DestSubPath: module.DestSubPath}
 	return signature
 }
 
-// ChipherStr encode str with SHA256.
-func ChipherStr(str string) string {
+// GenerateSourceID convert RSYNC source URL to unique identifier.
+func GenerateSourceID(rsyncSource string) string {
+	return chipherStr(rsync.NormalizeRsyncURL(rsyncSource))
+}
+
+// chipherStr encode str with SHA256 hash function.
+// Used to encode RSYNC source path before file serialization.
+func chipherStr(str string) string {
 	hasher := sha256.New()
 	var b bytes.Buffer
 	b.WriteString(str)
@@ -39,25 +53,14 @@ func ChipherStr(str string) string {
 	return sha
 }
 
-// normalizeRsync remove excess divider in rsync path.
-func normalizeRsync(source string) string {
-	chars := []rune(source)
-	for i := len(chars) - 1; i >= 0; i-- {
-		if chars[i] != '/' {
-			newChars := chars[:i+1]
-			return string(newChars)
-		}
-	}
-	return ""
-}
-
+// NodeSignatures keeps list of RSYNC source to backup in one session.
 type NodeSignatures struct {
 	Signatures []NodeSignature
 }
 
-func GetNodeSignatures(config *Config) NodeSignatures {
-	signatures := make([]NodeSignature, len(config.BackupNodes))
-	for i, item := range config.BackupNodes {
+func GetNodeSignatures(modules []Module) NodeSignatures {
+	signatures := make([]NodeSignature, len(modules))
+	for i, item := range modules {
 		signatures[i] = GetSignature(item)
 	}
 	s := NodeSignatures{Signatures: signatures}
@@ -73,15 +76,16 @@ func (v NodeSignatures) FindFirstSignature(signature string) *NodeSignature {
 	return nil
 }
 
-// PrevBackup describe found previous backup, which contain same Rsync source.
-// Such previous backups used for Rsync utility deduplication, which
-// significantly decrease size and time for repeated backup sessions.
+// PrevBackup describe previous backup found, which contain same RSYNC source.
+// Such previous backups used for RSYNC utility deduplication, which
+// significantly decrease size and time for new backup session.
 type PrevBackup struct {
 	// Full path to signature file name
 	SignatureFileName string
 	Signature         NodeSignature
 }
 
+// GetDirPath returns full path to data copied in previous successful backup session.
 func (v PrevBackup) GetDirPath() string {
 	backupPath := path.Join(path.Dir(v.SignatureFileName), v.Signature.DestSubPath)
 	return backupPath
@@ -92,26 +96,48 @@ type PrevBackups struct {
 	Backups []PrevBackup
 }
 
+// GetDirPaths provide file system paths to previous backup sessions found.
 func (v *PrevBackups) GetDirPaths() []string {
-	var paths []string
-	for _, b := range v.Backups {
-		paths = append(paths, b.GetDirPath())
+	paths := make([]string, len(v.Backups))
+	for i, b := range v.Backups {
+		paths[i] = b.GetDirPath()
 	}
 	return paths
 }
 
+// FilterBySourceID choose backup sessions which contains same source
+// as specified by sourceID.
+func (v *PrevBackups) FilterBySourceID(sourceID string) *PrevBackups {
+	var newPrevBackups []PrevBackup
+	for _, v := range v.Backups {
+		if sourceID == v.Signature.SourceRsyncCipher {
+			newPrevBackups = append(newPrevBackups, v)
+		}
+	}
+	return &PrevBackups{Backups: newPrevBackups}
+}
+
+type prevBackupEntry struct {
+	time   time.Time
+	backup PrevBackup
+}
+
+// FindPrevBackupPathsByNodeSignatures search for previous backup sessions which
+// might significantly decrease backup size and speed up process.
+// In the end it should return list of previous backup sessions sorted by date/time
+// in descending order (recent go first).
 func FindPrevBackupPathsByNodeSignatures(lg logger.PackageLog, destPath string,
 	signs NodeSignatures, lastN int) (*PrevBackups, error) {
 
+	// select all child items from root backup destination path
 	items, err := ioutil.ReadDir(destPath)
 	if err != nil {
 		return nil, err
 	}
-	candidates := make(map[string][]struct {
-		time   time.Time
-		backup PrevBackup
-	})
 
+	candidates := make(map[string][]prevBackupEntry)
+
+	// loop through child folders to identify them as a previous backup sessions
 	for _, item := range items {
 		if item.IsDir() {
 			fileName := filepath.Join(destPath, item.Name(), GetMetadataSignatureFileName())
@@ -147,10 +173,8 @@ func FindPrevBackupPathsByNodeSignatures(lg logger.PackageLog, destPath string,
 				for _, item1 := range signs.Signatures {
 					if candidate := signs2.FindFirstSignature(item1.SourceRsyncCipher); candidate != nil {
 						backup := PrevBackup{SignatureFileName: fileName, Signature: *candidate}
-						candidates[item1.SourceRsyncCipher] = append(candidates[item1.SourceRsyncCipher], struct {
-							time   time.Time
-							backup PrevBackup
-						}{time: stat.ModTime(), backup: backup})
+						candidates[item1.SourceRsyncCipher] = append(candidates[item1.SourceRsyncCipher],
+							prevBackupEntry{time: stat.ModTime(), backup: backup})
 					}
 				}
 			}
@@ -161,22 +185,33 @@ func FindPrevBackupPathsByNodeSignatures(lg logger.PackageLog, destPath string,
 		}
 	}
 
-	candidates2 := make(map[string][]struct {
-		time   time.Time
-		backup PrevBackup
-	})
+	// sort all candidates found by creation/modification time, to select the most resent previous backup sessions
+	candidates2 := make(map[string][]prevBackupEntry)
 	for k, v := range candidates {
-		sorted := FilesSortedByDate{Files: v}
+		// sort previous backup sessions in descending order (the most recent come first)
+		sorted := filesSortedByDate{Files: v}
 		sort.Sort(sorted)
+		maxPrevSessions := lastN
+		// extra protection: according to limitation which exist in RSYNC,
+		// no more than 20 --link-dest options could be provided with CLI, otherwise
+		// RSYNC call failed (syntax or usage error, code 1) thrown;
+		// maximum number of --link-dest option in single RSYNC call (detected experimentally)
+		const maxLinkDest = 20
+		// if still exceed, cut down
+		if maxPrevSessions > maxLinkDest {
+			maxPrevSessions = maxLinkDest
+		}
+		if len(sorted.Files) > maxPrevSessions {
+			// cut to maxPrevSessions maximum
+			sorted.Files = sorted.Files[:maxPrevSessions]
+		}
 		candidates2[k] = sorted.Files
 	}
 
 	var backups []PrevBackup
-	for i := 0; i < lastN; i++ {
-		for _, v := range candidates2 {
-			if i < len(v) {
-				backups = append(backups, v[i].backup)
-			}
+	for _, v := range candidates2 {
+		for _, v2 := range v {
+			backups = append(backups, v2.backup)
 		}
 	}
 
@@ -184,30 +219,31 @@ func FindPrevBackupPathsByNodeSignatures(lg logger.PackageLog, destPath string,
 	return backups2, nil
 }
 
-type FilesSortedByDate struct {
-	Files []struct {
-		time   time.Time
-		backup PrevBackup
-	}
+// Temporary object used to sort found previous backup sessions by creation/modification date
+// in descending order (the most recent come first).
+type filesSortedByDate struct {
+	Files []prevBackupEntry
 }
 
-func (s FilesSortedByDate) Len() int {
+func (s filesSortedByDate) Len() int {
 	return len(s.Files)
 }
 
-func (s FilesSortedByDate) Less(i, j int) bool {
+func (s filesSortedByDate) Less(i, j int) bool {
 	return s.Files[i].time.After(s.Files[j].time)
 }
 
-func (s FilesSortedByDate) Swap(i, j int) {
+func (s filesSortedByDate) Swap(i, j int) {
 	node := s.Files[i]
 	s.Files[i] = s.Files[j]
 	s.Files[j] = node
 }
 
-func CreateMetadataSignatureFile(config *Config, destPath string) error {
-	signs := GetNodeSignatures(config)
-	err := os.MkdirAll(destPath, 0777)
+// CreateMetadataSignatureFile serialize RSYNC sources plus destination subpaths
+// to the special "backup session signature" file.
+func CreateMetadataSignatureFile(modules []Module, destPath string) error {
+	signs := GetNodeSignatures(modules)
+	err := createDirAll(destPath)
 	if err != nil {
 		return err
 	}

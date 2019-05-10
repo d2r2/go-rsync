@@ -26,6 +26,7 @@ const (
 	STOCK_OK_ICON            = "emblem-ok-symbolic"
 	STOCK_QUESTION_ICON      = "dialog-question-symbolic"
 	STOCK_SYNCHRONIZING_ICON = "emblem-synchronizing-symbolic"
+	ASSET_SYNCHRONIZING_ICON = "emblem-synchronizing-cyan.gif"
 	STOCK_IMPORTANT_ICON     = "emblem-important-symbolic"
 	ASSET_IMPORTANT_ICON     = "emblem-important-red.gif"
 	STOCK_NETWORK_ERROR_ICON = "network-error-symbolic"
@@ -177,6 +178,7 @@ func GeneralPreferencesNew(gsSettings *glib.Settings) (*gtk.Container, error) {
 		{"14 px", "14px"},
 		{"16 px", "16px"},
 		{"18 px", "18px"},
+		{"20 px", "20px"},
 	}
 	cbSessionLogFontSize, err := CreateNameValueCombo(values)
 	if err != nil {
@@ -396,6 +398,93 @@ func createBackupSourceBlock(profileID, sourceID string, gsSettings *glib.Settin
 	grid.Attach(edDestSubpath, 1, row, 1, 1)
 	row++
 
+	// Extra options
+	expExtraOptions, err := gtk.ExpanderNew(locale.T(MsgPrefDlgExtraOptionsBoxCaption, nil))
+	if err != nil {
+		return nil, err
+	}
+	expExtraOptions.SetTooltipText(locale.T(MsgPrefDlgExtraOptionsBoxHint, nil))
+	grid.Attach(expExtraOptions, 0, row, 2, 1)
+	row++
+
+	box2, err := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 6)
+	if err != nil {
+		return nil, err
+	}
+	SetAllMargins(box2, 9)
+	box2.SetMarginEnd(0)
+	box2.SetMarginStart(0)
+	expExtraOptions.Add(box2)
+
+	frame, err := gtk.FrameNew("")
+	if err != nil {
+		return nil, err
+	}
+	box2.PackStart(frame, true, true, 0)
+
+	box3, err := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 6)
+	if err != nil {
+		return nil, err
+	}
+	SetAllMargins(box3, 18)
+	frame.Add(box3)
+
+	grid2, err := gtk.GridNew()
+	grid2.SetColumnSpacing(12)
+	grid2.SetRowSpacing(6)
+	grid2.SetHAlign(gtk.ALIGN_FILL)
+	box3.PackStart(grid2, true, true, 0)
+	row2 := 0
+	/*
+		// Authenticate user
+		lbl, err = setupLabelJustifyRight("Auth. user")
+		if err != nil {
+			return nil, err
+		}
+		lbl.SetUseMarkup(true)
+		grid2.Attach(lbl, 0, row2, 1, 1)
+		edAuthUser, err := gtk.EntryNew()
+		if err != nil {
+			return nil, err
+		}
+		edAuthUser.SetTooltipText("")
+		edAuthUser.SetHExpand(true)
+		grid2.Attach(edAuthUser, 1, row2, 1, 1)
+		row2++
+	*/
+	// Authenticate password
+	lbl, err = setupLabelJustifyRight(locale.T(MsgPrefDlgAuthPasswordCaption, nil))
+	if err != nil {
+		return nil, err
+	}
+	lbl.SetUseMarkup(true)
+	grid2.Attach(lbl, 0, row2, 1, 1)
+	edAuthPasswd, err := gtk.EntryNew()
+	if err != nil {
+		return nil, err
+	}
+	edAuthPasswd.SetTooltipText(locale.T(MsgPrefDlgAuthPasswordHint, nil))
+	edAuthPasswd.SetHExpand(true)
+	edAuthPasswd.SetInvisibleChar('*')
+	edAuthPasswd.SetVisibility(false)
+	grid2.Attach(edAuthPasswd, 1, row2, 1, 1)
+	row2++
+	// Change file permission
+	lbl, err = setupLabelJustifyRight(locale.T(MsgPrefDlgChangeFilePermissionCaption, nil))
+	if err != nil {
+		return nil, err
+	}
+	lbl.SetUseMarkup(true)
+	grid2.Attach(lbl, 0, row2, 1, 1)
+	edChmod, err := gtk.EntryNew()
+	if err != nil {
+		return nil, err
+	}
+	edChmod.SetTooltipText(locale.T(MsgPrefDlgChangeFilePermissionHint, nil))
+	edChmod.SetHExpand(true)
+	grid2.Attach(edChmod, 1, row2, 1, 1)
+	row2++
+
 	// Enable/disable backup block
 	lbl, err = setupLabelJustifyRight(locale.T(MsgPrefDlgEnableBackupBlockCaption, nil))
 	if err != nil {
@@ -421,7 +510,11 @@ func createBackupSourceBlock(profileID, sourceID string, gsSettings *glib.Settin
 			if !ok {
 				return validatorConversionError("ValidatorData.Items[0]", "*gtk.Entry")
 			}
-			entry.SetIconFromIconName(gtk.ENTRY_ICON_SECONDARY, STOCK_SYNCHRONIZING_ICON)
+			// entry.SetIconFromIconName(gtk.ENTRY_ICON_SECONDARY, STOCK_SYNCHRONIZING_ICON)
+			err := SetEntryIconWithAssetImage(entry, gtk.ENTRY_ICON_SECONDARY, ASSET_SYNCHRONIZING_ICON)
+			if err != nil {
+				return err
+			}
 			RsyncSourcePathDescription := locale.T(MsgPrefDlgSourceRsyncPathDescriptionHint, nil)
 			markup := markupTooltip(NewMarkup(0, MARKUP_COLOR_SKY_BLUE, 0,
 				locale.T(MsgPrefDlgSourceRsyncValidatingHint, nil), nil), RsyncSourcePathDescription)
@@ -455,7 +548,13 @@ func createBackupSourceBlock(profileID, sourceID string, gsSettings *glib.Settin
 					warning = &msg
 				} else {
 					lg.Debugf("Start rsync utility to validate rsync source")
-					err := rsync.GetPathStatus(ctx, rsyncURL, false)
+					sourceSettings, err := getBackupSourceSettings(profileID, sourceID, profileChanged)
+					var authPass *string
+					ap := sourceSettings.GetString(CFG_MODULE_AUTH_PASSWORD)
+					if ap != "" {
+						authPass = &ap
+					}
+					err = rsync.GetPathStatus(ctx, authPass, rsyncURL, false)
 					if err != nil {
 						lg.Debug(err)
 						if !rsync.IsRsyncProcessTerminatedError(err) {
@@ -565,7 +664,7 @@ func createBackupSourceBlock(profileID, sourceID string, gsSettings *glib.Settin
 		return nil, err
 	}
 
-	bh.Bind(CFG_SOURCE_RSYNC_SOURCE_PATH, edRsyncPath, "text", glib.SETTINGS_BIND_DEFAULT)
+	bh.Bind(CFG_MODULE_RSYNC_SOURCE_PATH, edRsyncPath, "text", glib.SETTINGS_BIND_DEFAULT)
 	text, err := edRsyncPath.GetText()
 	if err != nil {
 		return nil, err
@@ -593,7 +692,11 @@ func createBackupSourceBlock(profileID, sourceID string, gsSettings *glib.Settin
 				return validatorConversionError("ValidatorData.Items[1]", "*gtk.Switch")
 			}
 			if swtch.GetActive() {
-				entry.SetIconFromIconName(gtk.ENTRY_ICON_SECONDARY, STOCK_SYNCHRONIZING_ICON)
+				// entry.SetIconFromIconName(gtk.ENTRY_ICON_SECONDARY, STOCK_SYNCHRONIZING_ICON)
+				SetEntryIconWithAssetImage(entry, gtk.ENTRY_ICON_SECONDARY, ASSET_SYNCHRONIZING_ICON)
+				if err != nil {
+					return err
+				}
 			}
 			return nil
 		},
@@ -738,7 +841,28 @@ func createBackupSourceBlock(profileID, sourceID string, gsSettings *glib.Settin
 	if err != nil {
 		return nil, err
 	}
-	bh.Bind(CFG_SOURCE_DEST_SUBPATH, edDestSubpath, "text", glib.SETTINGS_BIND_DEFAULT)
+
+	_, err = edAuthPasswd.Connect("changed", func(v *gtk.Entry) {
+		if swEnabled.GetActive() {
+			RestartTimer(rsyncPathTimer, 1000)
+		}
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	bh.Bind(CFG_MODULE_DEST_SUBPATH, edDestSubpath, "text", glib.SETTINGS_BIND_DEFAULT)
+
+	bh.Bind(CFG_MODULE_CHANGE_FILE_PERMISSION, edChmod, "text", glib.SETTINGS_BIND_DEFAULT)
+	bh.Bind(CFG_MODULE_AUTH_PASSWORD, edAuthPasswd, "text", glib.SETTINGS_BIND_DEFAULT)
+
+	sourceSettings, err := getBackupSourceSettings(profileID, sourceID, profileChanged)
+	if err != nil {
+		return nil, err
+	}
+	ap := sourceSettings.GetString(CFG_MODULE_AUTH_PASSWORD)
+	cfp := sourceSettings.GetString(CFG_MODULE_CHANGE_FILE_PERMISSION)
+	expExtraOptions.SetExpanded(ap != "" || cfp != "")
 
 	_, err = swEnabled.Connect("state-set", func(v *gtk.Switch) {
 		RestartTimer(rsyncPathTimer, 50)
@@ -747,7 +871,7 @@ func createBackupSourceBlock(profileID, sourceID string, gsSettings *glib.Settin
 	if err != nil {
 		return nil, err
 	}
-	bh.Bind(CFG_SOURCE_ENABLED, swEnabled, "active", glib.SETTINGS_BIND_DEFAULT)
+	bh.Bind(CFG_MODULE_ENABLED, swEnabled, "active", glib.SETTINGS_BIND_DEFAULT)
 
 	box.PackStart(grid, true, true, 0)
 	box.SetHExpand(true)
@@ -1168,7 +1292,7 @@ func BackupPreferencesNew(appSettings *glib.Settings, list *PreferenceRowList,
 }
 
 // AdvancedPreferencesNew create preference dialog with "Advanced" page, where controls
-// being bound to GLib Setting object to save/restore functionality.
+// bound to GLib Setting object for save/restore functionality.
 func AdvancedPreferencesNew(gsSettings *glib.Settings) (*gtk.Container, error) {
 	box, err := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 6)
 	if err != nil {
@@ -1443,7 +1567,7 @@ func AdvancedPreferencesNew(gsSettings *glib.Settings) (*gtk.Container, error) {
 		return nil, err
 	}
 	grid.Attach(lbl, DesignFirstCol, row, 1, 1)
-	sbNumberOfPreviousBackupToUse, err := gtk.SpinButtonNewWithRange(1, 5, 1)
+	sbNumberOfPreviousBackupToUse, err := gtk.SpinButtonNewWithRange(1, 20, 1)
 	if err != nil {
 		return nil, err
 	}
@@ -1725,11 +1849,11 @@ func (v *PreferenceRow) updateErrorStatus() error {
 }
 
 // AddErrorStatus add error status to the list box item.
-func (v *PreferenceRow) AddErrorStatus(sourceId uintptr, err string) error {
+func (v *PreferenceRow) AddErrorStatus(sourceID uintptr, err string) error {
 	v.Lock()
 	defer v.Unlock()
 
-	v.Errors[sourceId] = err
+	v.Errors[sourceID] = err
 
 	err2 := v.updateErrorStatus()
 	if err2 != nil {
@@ -1739,11 +1863,11 @@ func (v *PreferenceRow) AddErrorStatus(sourceId uintptr, err string) error {
 }
 
 // RemoveErrorStatus removes error status from the list box item.
-func (v *PreferenceRow) RemoveErrorStatus(sourceId uintptr) error {
+func (v *PreferenceRow) RemoveErrorStatus(sourceID uintptr) error {
 	v.Lock()
 	defer v.Unlock()
 
-	delete(v.Errors, sourceId)
+	delete(v.Errors, sourceID)
 
 	err2 := v.updateErrorStatus()
 	if err2 != nil {

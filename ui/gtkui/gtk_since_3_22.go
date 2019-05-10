@@ -8,3 +8,7 @@ import "github.com/d2r2/gotk3/gtk"
 func SetScrolledWindowPropogatedHeight(sw *gtk.ScrolledWindow, propagate bool) {
 	sw.SetPropagateNaturalHeight(propagate)
 }
+
+func ShowUri(window *gtk.Window, uri string) error {
+	return gtk.ShowUriOnWindow(window, uri)
+}

@@ -7,6 +7,7 @@ import (
 	"github.com/d2r2/gotk3/pango"
 )
 
+// schemaSettingsErrorDialog display error related to GLIB GSettings application configuration.
 func schemaSettingsErrorDialog(parent *gtk.Window, text string, extraMsg *string) error {
 	//title := "<span weight='bold' size='larger'>Schema settings configuration error</span>"
 	titleMarkup := NewMarkup(MARKUP_SIZE_LARGER, 0, 0, nil, nil,
@@ -74,14 +75,20 @@ func interruptBackupDialog(parent *gtk.Window) (bool, error) {
 	return IsResponseYes(response), nil
 }
 
+// OutOfSpaceResponse denote response from RSYNC out of space dialog query.
 type OutOfSpaceResponse int
 
+// 3 response type from RSYNC out of space dialog query:
+// 1) retry RSYNC failed call;
+// 2) ignore RSYNC filed call, but continue backup process;
+// 3) immediately terminate backup process.
 const (
 	OutOfSpaceRetry OutOfSpaceResponse = iota
 	OutOfSpaceIgnore
 	OutOfSpaceTerminate
 )
 
+// outOfSpaceDialog show dialog once RSYNC out of space issue happens.
 func outOfSpaceDialog(parent *gtk.Window, paths core.SrcDstPath, freeSpace uint64) (OutOfSpaceResponse, error) {
 	title := locale.T(MsgAppWindowOutOfSpaceDlgTitle, nil)
 	titleMarkup := NewMarkup(MARKUP_SIZE_LARGER, 0, 0, nil, nil,
@@ -140,6 +147,7 @@ func outOfSpaceDialog(parent *gtk.Window, paths core.SrcDstPath, freeSpace uint6
 	}
 }
 
+// questionDialog shows standard question dialog with localizable YES/NO selection.
 func questionDialog(parent *gtk.Window, titleMarkup string, textMarkup string,
 	defaultNo bool, yesDestructive bool, noSuggested bool) (bool, error) {
 	yesButtonCaption := locale.T(MsgDialogYesButton, nil)
@@ -186,5 +194,4 @@ func questionDialog(parent *gtk.Window, titleMarkup string, textMarkup string,
 			return false, nil
 		}
 	}
-	return false, nil
 }

@@ -3,10 +3,10 @@ package locale
 import (
 	"fmt"
 
-	"github.com/d2r2/go-logger"
+	logger "github.com/d2r2/go-logger"
 )
 
-var lg = logger.NewPackageLogger("i18n",
+var lg = logger.NewPackageLogger("locale",
 	// logger.DebugLevel,
 	logger.InfoLevel,
 )

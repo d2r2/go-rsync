@@ -27,10 +27,12 @@ var (
 	_version  string
 )
 
+// SetVersion save application version provided via -ldflags CLI parameter.
 func SetVersion(version string) {
 	_version = version
 }
 
+// SetVersion save application build number provided via -ldflags CLI parameter.
 func SetBuildNum(buildnum string) {
 	_buildnum = buildnum
 }
@@ -52,26 +54,32 @@ func generateBuildNum() string {
 	return _buildnum
 }
 
+// GetAppVersion returns string representation of application version.
 func GetAppVersion() string {
 	return spew.Sprintf("v%s", _version)
 }
 
+// GetAppArchitecture returns application architecture.
 func GetAppArchitecture() string {
 	return runtime.GOARCH
 }
 
+// GetGolangVersion returns golang version used to compile application.
 func GetGolangVersion() string {
 	return runtime.Version()
 }
 
+// GetAppTitle returns application non-translatable title.
 func GetAppTitle() string {
 	return "Gorsync Backup"
 }
 
+// GetAppExtraTitle returns application translatable extra title.
 func GetAppExtraTitle() string {
 	return locale.T(MsgAppTitleExtra, nil)
 }
 
+// GetAppFullTitle returns application full title.
 func GetAppFullTitle() string {
 	appTitle := GetAppTitle()
 	appTitleExtra := GetAppExtraTitle()

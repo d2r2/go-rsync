@@ -18,6 +18,11 @@ const (
 
 func createDirAll(path string) error {
 	err := os.MkdirAll(path, 0777)
+	return err
+}
+
+func createDirInBackupStage(path string) error {
+	err := createDirAll(path)
 	if err != nil {
 		err = errors.New(locale.T(MsgLogBackupStageFailedToCreateFolder,
 			struct {
@@ -28,21 +33,6 @@ func createDirAll(path string) error {
 	}
 	return nil
 }
-
-// func writeLog(log bytes.Buffer, destPath, fileName string) error {
-// 	err := os.MkdirAll(destPath, 0777)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	destPath = filepath.Join(destPath, fileName)
-// 	file, err := os.Create(destPath)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	defer file.Close()
-// 	_, err = file.Write(log.Bytes())
-// 	return err
-// }
 
 func splitToLines(buf *bytes.Buffer) ([]string, error) {
 	var lines []string
@@ -63,6 +53,12 @@ func writeLineIndent(buf *bytes.Buffer, tabNumber int, text string) {
 	buf.WriteString(fmt.Sprintln(text))
 }
 
+// GetBackupTypeDescription return localized description of how
+// application will backup specific directory described by core.Dir object.
+// It could be 3 options:
+// 1) full backup: backup full content include all nested folders;
+// 2) flat backup: backup only direct files in folder, ignore nested folders;
+// 3) skip backup: skip folder backup (this happens when specific signature file found).
 func GetBackupTypeDescription(backupType core.FolderBackupType) string {
 	var backupStr string
 	switch backupType {
@@ -76,40 +72,17 @@ func GetBackupTypeDescription(backupType core.FolderBackupType) string {
 	return backupStr
 }
 
-// func TranslateRsyncError(err error) error {
-// 	if err2, ok := err.(*rsync.RsyncError); ok {
-// 		// translate RsyncError to local language
-// 		err = errors.New(locale.T(MsgRsyncCallFailedError,
-// 			struct {
-// 				Description string
-// 				ExitCode    int
-// 			}{Description: err2.Description, ExitCode: err2.ExitCode}))
-// 	}
-// 	return err
-// }
-
 // GetBackupFolderName return new folder name for ongoing backup process.
-func GetBackupFolderName( /*backupType io.BackupType,*/
-	incomplete bool, date *time.Time) string {
-
-	var prefixPath string = "~rsync_backup"
-	/*
-		if backupType == io.BT_FULL {
-			//		prefixPath = "~rsync_backup_full"
-			prefixPath = "~rsync_backup"
-		} else if backupType == io.BT_DIFF {
-			//		prefixPath = "~rsync_backup_snap"
-			prefixPath = "~rsync_backup"
-		}
-	*/
+func GetBackupFolderName(incomplete bool, date *time.Time) string {
+	prefixPath := "~rsync_backup"
 	if incomplete {
 		prefixPath += "_(incomplete)"
 	}
-	var t time.Time = time.Now()
+	var dt time.Time = time.Now()
 	if date != nil {
-		t = *date
+		dt = *date
 	}
-	prefixPath += t.Format("~20060102-150405~")
+	prefixPath += dt.Format("~20060102-150405~")
 	return prefixPath
 }
 
@@ -124,7 +97,7 @@ func GetLogFileName() string {
 	return "~backup_log~.log"
 }
 
-// GetRsyncLogFileName return the name of specific low-level Rsync utility log.
+// GetRsyncLogFileName return the name of specific low-level RSYNC utility log.
 func GetRsyncLogFileName() string {
 	return "~rsync_log~.log"
 }

@@ -7,7 +7,7 @@ import (
 )
 
 var lg = logger.NewPackageLogger("rsync",
-	//logger.DebugLevel,
+	// logger.DebugLevel,
 	logger.InfoLevel,
 )
 

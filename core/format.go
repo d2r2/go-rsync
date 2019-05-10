@@ -10,7 +10,8 @@ import (
 
 // FormatDurationToDaysHoursMinsSecs print time span
 // in the format "x1 day(s) x2 hour(s) x3 minute(s) x4 second(s)".
-// Understand plural cases for right spellings. Might be limited to number of sections.
+// Understand plural cases for right spellings. Might be limited
+// to number of sections to print.
 func FormatDurationToDaysHoursMinsSecs(dur time.Duration, short bool, sections *int) string {
 	var buf bytes.Buffer
 	var totalHrs float64 = dur.Hours()
@@ -82,6 +83,8 @@ func FormatDurationToDaysHoursMinsSecs(dur time.Duration, short bool, sections *
 	return buf.String()
 }
 
+// pluralFloatToInt is doing some workaround how to interpret
+// float amounts in context of plural forms.
 func pluralFloatToInt(val float64) int {
 	if val == 1 {
 		return 1
@@ -94,15 +97,17 @@ func pluralFloatToInt(val float64) int {
 	}
 }
 
+// byte count in corresponding data measurements
 const (
-	kB = 1000
-	MB = 1000 * 1000
-	GB = 1000 * 1000 * 1000
-	TB = 1000 * 1000 * 1000 * 1000
-	PB = 1000 * 1000 * 1000 * 1000 * 1000
-	EB = 1000 * 1000 * 1000 * 1000 * 1000 * 1000
+	KB = 1000
+	MB = 1000 * KB
+	GB = 1000 * MB
+	TB = 1000 * GB
+	PB = 1000 * TB
+	EB = 1000 * PB
 )
 
+// FormatSize convert byte count amount to human-readable (short) string representation.
 func FormatSize(byteCount uint64, short bool) string {
 	if byteCount > EB {
 		a := float64(byteCount) / EB
@@ -149,8 +154,8 @@ func FormatSize(byteCount uint64, short bool) string {
 			return f("%v %s", a,
 				locale.TP(MsgMegaBytesLong, nil, a))
 		}
-	} else if byteCount > kB {
-		a := int(Round(float64(byteCount) / kB))
+	} else if byteCount > KB {
+		a := int(Round(float64(byteCount) / KB))
 		if short {
 			return f("%v %s", a,
 				locale.TP(MsgKiloBytesShort, nil, a))
@@ -170,10 +175,7 @@ func FormatSize(byteCount uint64, short bool) string {
 	}
 }
 
+// GetReadableSize convert FolderSize to human readable string representation.
 func GetReadableSize(size FolderSize) string {
 	return FormatSize(size.GetByteCount(), true)
-}
-
-func MegabytesToBytes(size uint64) uint64 {
-	return size * MB
 }

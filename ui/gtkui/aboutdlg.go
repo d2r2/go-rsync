@@ -180,6 +180,7 @@ permanent authorization for you to choose that version for the
 Library.`
 )
 
+// buildCommentBlock build multiline comments block to show in About Dialog.
 func buildCommentBlock() (*bytes.Buffer, error) {
 	version, protocol, err := rsync.GetRsyncVersion()
 	if err != nil {
@@ -215,10 +216,12 @@ func buildCommentBlock() (*bytes.Buffer, error) {
 		struct{ LicenseName string }{LicenseName: "GNU LGPL v3.0"})))
 	buf.WriteString(fmt.Sprintln())
 	buf.WriteString(fmt.Sprintln(locale.T(MsgAboutDlgFollowMyGithubProjectTitle, nil)))
+	buf.WriteString(fmt.Sprintln("https://github.com/d2r2?tab=repositories"))
 
 	return &buf, nil
 }
 
+// CreateAboutDialog creates about dialog object.
 func CreateAboutDialog(appSettings *glib.Settings) (*gtk.AboutDialog, error) {
 	dlg, err := gtk.AboutDialogNew()
 	if err != nil {
@@ -257,7 +260,7 @@ func CreateAboutDialog(appSettings *glib.Settings) (*gtk.AboutDialog, error) {
 	}
 	dlg.SetComments(buf.String())
 
-	dlg.SetWebsite("https://github.com/d2r2?tab=repositories")
+	dlg.SetWebsite("https://gorsync.github.io/")
 
 	return dlg, nil
 }
