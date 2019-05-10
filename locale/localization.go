@@ -61,7 +61,7 @@ func mustParseMessageFile(bundle *i18n.Bundle, assetIconName string) {
 
 // SetLanguage set up language globally for application localization.
 func SetLanguage(lang string) {
-	bundle := &i18n.Bundle{DefaultLanguage: language.English}
+	bundle := i18n.NewBundle(language.English)
 	bundle.RegisterUnmarshalFunc("toml", toml.Unmarshal)
 	mustParseMessageFile(bundle, "translate.en.toml")
 	mustParseMessageFile(bundle, "translate.ru.toml")
