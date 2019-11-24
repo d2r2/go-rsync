@@ -3,16 +3,17 @@ package backup
 import (
 	"fmt"
 
-	"github.com/BurntSushi/toml"
 	"github.com/d2r2/go-rsync/core"
 	"github.com/d2r2/go-rsync/rsync"
 )
 
+/*
 type IRsyncConfigurable interface {
 	GetRsyncParams(addExtraParams []string) []string
 }
+*/
 
-// Node contain information about single rsync source backup.
+// Node contain information about single RSYNC source backup.
 type Node struct {
 	Module  Module
 	RootDir *core.Dir
@@ -26,6 +27,8 @@ type Plan struct {
 	BackupSize core.FolderSize
 }
 
+// GetModules returns all RSYNC source/destination blocks
+// defined in single (specific) backup profile.
 func (v *Plan) GetModules() []Module {
 	modules := []Module{}
 	for _, item := range v.Nodes {
@@ -46,25 +49,20 @@ type Config struct {
 	NumberOfPreviousBackupToUse        *int   `toml:"number_of_previous_backup_to_use"`
 	EnableLowLevelLogForRsync          *bool  `toml:"enable_low_level_log_rsync"`
 	EnableIntensiveLowLevelLogForRsync *bool  `toml:"enable_intensive_low_level_log_rsync"`
-	// rsync --compress
-	RsyncCompressFileTransfer *bool `toml:"rsync_compress_file_transfer"`
-	// rsync --links
-	RsyncRecreateSymlinks *bool `toml:"rsync_recreate_symlinks"`
-	// rsync --perms
-	RsyncTransferSourcePermissions *bool `toml:"rsync_transfer_source_permissions"`
-	// rsync --group
-	RsyncTransferSourceGroup *bool `toml:"rsync_transfer_source_group"`
-	// rsync --owner
-	RsyncTransferSourceOwner *bool `toml:"rsync_transfer_source_owner"`
-	// rsync --devices
-	RsyncTransferDeviceFiles *bool `toml:"rsync_transfer_device_files"`
-	// rsync --specials
-	RsyncTransferSpecialFiles *bool `toml:"rsync_transfer_special_files"`
+
+	RsyncTransferSourceOwner       *bool `toml:"rsync_transfer_source_owner"`       // rsync --owner
+	RsyncTransferSourceGroup       *bool `toml:"rsync_transfer_source_group"`       // rsync --group
+	RsyncTransferSourcePermissions *bool `toml:"rsync_transfer_source_permissions"` // rsync --perms
+	RsyncRecreateSymlinks          *bool `toml:"rsync_recreate_symlinks"`           // rsync --links
+	RsyncTransferDeviceFiles       *bool `toml:"rsync_transfer_device_files"`       // rsync --devices
+	RsyncTransferSpecialFiles      *bool `toml:"rsync_transfer_special_files"`      // rsync --specials
+	RsyncCompressFileTransfer      *bool `toml:"rsync_compress_file_transfer"`      // rsync --compress
 
 	// BackupNode list contain all RSYNC sources to backup in one session.
 	//Modules []Module `toml:"backup_module"`
 }
 
+/*
 func NewConfig(filePath string) (*Config, error) {
 	var config Config
 	if _, err := toml.DecodeFile(filePath, &config); err != nil {
@@ -73,37 +71,10 @@ func NewConfig(filePath string) (*Config, error) {
 	LocalLog.Debug(f("%+v", config))
 	return &config, nil
 }
-
-// Prepare RSYNC CLI parameters to run console RSYNC process.
-func (conf *Config) GetRsyncParams(addExtraParams []string) []string {
-	var params []string
-	if conf.RsyncCompressFileTransfer != nil && *conf.RsyncCompressFileTransfer {
-		params = append(params, "--compress")
-	}
-	if conf.RsyncTransferSourceOwner != nil && *conf.RsyncTransferSourceOwner {
-		params = append(params, "--owner")
-	}
-	if conf.RsyncTransferSourceGroup != nil && *conf.RsyncTransferSourceGroup {
-		params = append(params, "--group")
-	}
-	if conf.RsyncTransferSourcePermissions != nil && *conf.RsyncTransferSourcePermissions {
-		params = append(params, "--perms")
-	}
-	if conf.RsyncRecreateSymlinks != nil && *conf.RsyncRecreateSymlinks {
-		params = append(params, "--links")
-	}
-	if conf.RsyncTransferDeviceFiles != nil && *conf.RsyncTransferDeviceFiles {
-		params = append(params, "--devices")
-	}
-	if conf.RsyncTransferSpecialFiles != nil && *conf.RsyncTransferSpecialFiles {
-		params = append(params, "--specials")
-	}
-	params = append(params, addExtraParams...)
-	return params
-}
+*/
 
 func (conf *Config) usePreviousBackupEnabled() bool {
-	var usePreviousBackup bool = true
+	var usePreviousBackup = true
 	if conf.UsePreviousBackup != nil {
 		usePreviousBackup = *conf.UsePreviousBackup
 	}
@@ -111,14 +82,14 @@ func (conf *Config) usePreviousBackupEnabled() bool {
 }
 
 func (conf *Config) numberOfPreviousBackupToUse() int {
-	var numberOfPreviousBackupToUse int = 1
+	var numberOfPreviousBackupToUse = 1
 	if conf.NumberOfPreviousBackupToUse != nil {
 		numberOfPreviousBackupToUse = *conf.NumberOfPreviousBackupToUse
 	}
 	return numberOfPreviousBackupToUse
 }
 
-func (conf *Config) getRsyncSettings() *rsync.Logging {
+func (conf *Config) getRsyncLoggingSettings() *rsync.Logging {
 	logging := &rsync.Logging{}
 	if conf.EnableLowLevelLogForRsync != nil {
 		logging.EnableLog = *conf.EnableLowLevelLogForRsync
@@ -140,19 +111,64 @@ func (conf *Config) getBackupBlockSizeSettings() *backupBlockSizeSettings {
 	return blockSize
 }
 
+// Module signify RSYNC source/destination block, with
+// source/destination URLs and other auxiliary options.
+// Used as configuration data in the backup session code.
 type Module struct {
-	SourceRsync          string  `toml:"src_rsync"`
-	DestSubPath          string  `toml:"dst_subpath"`
+	SourceRsync string `toml:"src_rsync"`
+	DestSubPath string `toml:"dst_subpath"`
+
 	ChangeFilePermission string  `toml:"rsync_change_file_permission"`
 	AuthPassword         *string `toml:"module_auth_password"`
+
+	RsyncTransferSourceOwner       *bool `toml:"rsync_transfer_source_owner"`       // rsync --owner
+	RsyncTransferSourceGroup       *bool `toml:"rsync_transfer_source_group"`       // rsync --group
+	RsyncTransferSourcePermissions *bool `toml:"rsync_transfer_source_permissions"` // rsync --perms
+	RsyncRecreateSymlinks          *bool `toml:"rsync_recreate_symlinks"`           // rsync --links
+	RsyncTransferDeviceFiles       *bool `toml:"rsync_transfer_device_files"`       // rsync --devices
+	RsyncTransferSpecialFiles      *bool `toml:"rsync_transfer_special_files"`      // rsync --specials
 }
 
-// Prepare RSYNC CLI parameters to run console RSYNC process.
-func (module *Module) GetRsyncParams(addExtraParams []string) []string {
+// GetRsyncParams prepare RSYNC CLI parameters to run console RSYNC process.
+func GetRsyncParams(conf *Config, module *Module, addExtraParams []string) []string {
 	var params []string
+	if module.RsyncTransferSourceOwner != nil && *module.RsyncTransferSourceOwner ||
+		module.RsyncTransferSourceOwner == nil && conf.RsyncTransferSourceOwner != nil &&
+			*conf.RsyncTransferSourceOwner {
+		params = append(params, "--owner")
+	}
+	if module.RsyncTransferSourceGroup != nil && *module.RsyncTransferSourceGroup ||
+		module.RsyncTransferSourceGroup == nil && conf.RsyncTransferSourceGroup != nil &&
+			*conf.RsyncTransferSourceGroup {
+		params = append(params, "--group")
+	}
+	if module.RsyncTransferSourcePermissions != nil && *module.RsyncTransferSourcePermissions ||
+		module.RsyncTransferSourcePermissions == nil && conf.RsyncTransferSourcePermissions != nil &&
+			*conf.RsyncTransferSourcePermissions {
+		params = append(params, "--perms")
+	}
+	if module.RsyncRecreateSymlinks != nil && *module.RsyncRecreateSymlinks ||
+		module.RsyncRecreateSymlinks == nil && conf.RsyncRecreateSymlinks != nil &&
+			*conf.RsyncRecreateSymlinks {
+		params = append(params, "--links")
+	}
+	if module.RsyncTransferDeviceFiles != nil && *module.RsyncTransferDeviceFiles ||
+		module.RsyncTransferDeviceFiles == nil && conf.RsyncTransferDeviceFiles != nil &&
+			*conf.RsyncTransferDeviceFiles {
+		params = append(params, "--devices")
+	}
+	if module.RsyncTransferSpecialFiles != nil && *module.RsyncTransferSpecialFiles ||
+		module.RsyncTransferSpecialFiles == nil && conf.RsyncTransferSpecialFiles != nil &&
+			*conf.RsyncTransferSpecialFiles {
+		params = append(params, "--specials")
+	}
+	if conf.RsyncCompressFileTransfer != nil && *conf.RsyncCompressFileTransfer {
+		params = append(params, "--compress")
+	}
 	if module.ChangeFilePermission != "" {
 		params = append(params, fmt.Sprintf("--chmod=%s", module.ChangeFilePermission))
 	}
+
 	params = append(params, addExtraParams...)
 	return params
 }

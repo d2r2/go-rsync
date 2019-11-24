@@ -196,49 +196,13 @@ func (v *NotifierUI) CreateProgressControls(sessionLogFontSize string) error {
 		if err != nil {
 			return err
 		}
-		css := `
-/****************
- * Progress bar *
- ****************/
-progressbar progress, trough {
-  min-height: 20px;
-}
-
-progressbar progress {
-
-	background-image: linear-gradient(to top, @theme_bg_color, @progressbar_bg_color);
-	
-
-    border-radius: 3px;
-    border-style: solid;
-    
-    border-color: @progressbar_border;
-    
-}
-
-/*
-progressbar progress {
-	background-image: linear-gradient(to top, @theme_bg_color, @theme_fg_color);
-
-    border-radius: 3px;
-    border-style: solid;
-    border-color: alpha(@progressbar_border, 0.01);
-}
-*/
-
-
-/*
-progressbar trough {
-    background-color: rgba(255, 255, 255, 255);
-}
-*/
-`
-		err = applyStyleCSS(&progressBar.Widget, css)
-		if err != nil {
-			return err
-		}
+		// err = ApplyStyleCSS(&progressBar.Widget, css)
+		// if err != nil {
+		// 	return err
+		// }
 		progressBar.SetHAlign(gtk.ALIGN_FILL)
 		progressBar.SetHExpand(true)
+		// AddStyleClass(&progressBar.Widget, "run-animation")
 		v.pbm = NewProgressBarManage(progressBar)
 		_, err = progressBar.Connect("destroy", func(pb *gtk.ProgressBar, pbm *ProgressBarManage) {
 			pbm.StopPulse()
@@ -296,7 +260,7 @@ textview {
     font: %s "Monospace";
 }
 		`
-		err = applyStyleCSS(&v.logTextView.Widget, spew.Sprintf(css, sessionLogFontSize))
+		err = ApplyStyleCSS(&v.logTextView.Widget, spew.Sprintf(css, sessionLogFontSize))
 		if err != nil {
 			return err
 		}
@@ -541,10 +505,7 @@ func (v *NotifierUI) UpdateTextViewLog(line string) error {
 		}
 		//}
 	}
-	_, err := glib.IdleAdd(call)
-	if err != nil {
-		return err
-	}
+	MustIdleAdd(call)
 	return nil
 }
 
@@ -556,20 +517,21 @@ func (v *NotifierUI) UpdateBackupProgress(progress *float32,
 	call := func() {
 		if progress == nil {
 			v.pbm.StartPulse()
+			v.pbm.AddProgressBarStyleClass("run-animation")
 		} else {
 			prg := float64(*progress)
 			err := v.pbm.SetFraction(prg)
 			if err != nil {
 				lg.Fatal(err)
 			}
+			if prg == 1 {
+				v.pbm.RemoveProgressBarStyleClass("run-animation")
+			}
 		}
 		v.statusLabel.SetMarkup(progressStr)
 	}
 	if fromAsync {
-		_, err := glib.IdleAdd(call)
-		if err != nil {
-			return err
-		}
+		MustIdleAdd(call)
 	} else {
 		call()
 	}
@@ -595,7 +557,7 @@ const (
 func (v *NotifierUI) decodeBackupCompletionType(err error,
 	backupProgress *backup.Progress) BackupCompletionType {
 	if err != nil {
-		if rsync.IsRsyncProcessTerminatedError(err) {
+		if rsync.IsProcessTerminatedError(err) {
 			return BackupTerminated
 		} else {
 			return BackupFailed
@@ -666,7 +628,7 @@ func (v *NotifierUI) getDesktopNotificationSummaryAndBody(completionType BackupC
 }
 
 func (v *NotifierUI) checkDesktopNotificationEnabled() (bool, error) {
-	appSettings, err := glib.SettingsNew(core.SETTINGS_ID)
+	appSettings, err := glib.SettingsNew(SETTINGS_SCHEMA_ID)
 	if err != nil {
 		return false, err
 	}
@@ -690,7 +652,7 @@ func (v *NotifierUI) sendDesktopNotification(completionType BackupCompletionType
 }
 
 func (v *NotifierUI) checkNotificationScriptEnabled() (bool, error) {
-	appSettings, err := glib.SettingsNew(core.SETTINGS_ID)
+	appSettings, err := glib.SettingsNew(SETTINGS_SCHEMA_ID)
 	if err != nil {
 		return false, err
 	}
@@ -746,7 +708,7 @@ func (v *NotifierUI) runNotificationScript(completionType BackupCompletionType,
 		shell = "/usr/bin/bash"
 	}
 
-	err, _ := core.RunExecutableWithExtraVars(shell,
+	_, err := core.RunExecutableWithExtraVars(shell,
 		buildEnvVars(completionType, backupProgress), "/etc/gorsync/notification.sh")
 	if err != nil {
 		return err
@@ -779,54 +741,52 @@ func (v *NotifierUI) ReportCompletion(progress float32, err error,
 
 	go func(completionType BackupCompletionType, backupProgress *backup.Progress) {
 		time.Sleep(time.Millisecond * 200)
-		_, err := glib.IdleAdd(func() {
+		MustIdleAdd(func() {
 			err := v.ScrollView()
 			if err != nil {
 				lg.Fatal(err)
 			}
-
-			enabled, err := v.checkDesktopNotificationEnabled()
-			if err != nil {
-				lg.Fatal(err)
-			}
-			if enabled && completionType != BackupTerminated {
-				err = v.sendDesktopNotification(completionType, backupProgress)
-				if err != nil {
-					lg.Warn(locale.T(MsgAppWindowShowNotificationError,
-						struct{ Error error }{Error: err}))
-				}
-			}
-			scriptPath := "/etc/gorsync/notification.sh"
-			enabled, err = v.checkNotificationScriptEnabled()
-			if err != nil {
-				lg.Fatal(err)
-			}
-			if enabled {
-				if stat, err := os.Stat(scriptPath); err == nil {
-					mode := stat.Mode()
-					// check script is executable for POSIX-kind OS
-					if !shell.IsLinuxMacOSFreeBSD() || mode&0111 != 0 {
-						err = v.runNotificationScript(completionType,
-							backupProgress, scriptPath)
-						if err != nil {
-							lg.Warn(locale.T(MsgAppWindowRunNotificationScriptError,
-								struct{ Error error }{Error: err}))
-						}
-					} else {
-						lg.Warn(locale.T(MsgAppWindowNotificationScriptExecutableError,
-							struct{ ScriptPath string }{ScriptPath: scriptPath}))
-					}
-				} else {
-					lg.Warn(locale.T(MsgAppWindowGetExecutableScriptInfoError,
-						struct{ Error error }{Error: err}))
-				}
-			}
-			// report about real completion via asynchronous method
-			close(v.done)
 		})
+
+		enabled, err := v.checkDesktopNotificationEnabled()
 		if err != nil {
 			lg.Fatal(err)
 		}
+		if enabled && completionType != BackupTerminated {
+			err = v.sendDesktopNotification(completionType, backupProgress)
+			if err != nil {
+				lg.Warn(locale.T(MsgAppWindowShowNotificationError,
+					struct{ Error error }{Error: err}))
+			}
+		}
+		scriptPath := "/etc/gorsync/notification.sh"
+		enabled, err = v.checkNotificationScriptEnabled()
+		if err != nil {
+			lg.Fatal(err)
+		}
+		if enabled {
+			if stat, err := os.Stat(scriptPath); err == nil {
+				mode := stat.Mode()
+				// check script is executable for POSIX-kind OS
+				if !shell.IsLinuxMacOSFreeBSD() || mode&0111 != 0 {
+					err = v.runNotificationScript(completionType,
+						backupProgress, scriptPath)
+					if err != nil {
+						lg.Warn(locale.T(MsgAppWindowRunNotificationScriptError,
+							struct{ Error error }{Error: err}))
+					}
+				} else {
+					lg.Warn(locale.T(MsgAppWindowNotificationScriptExecutableError,
+						struct{ ScriptPath string }{ScriptPath: scriptPath}))
+				}
+			} else {
+				lg.Warn(locale.T(MsgAppWindowGetExecutableScriptInfoError,
+					struct{ Error error }{Error: err}))
+			}
+		}
+		// report about real completion via asynchronous method
+		close(v.done)
+
 	}(completionType, backupProgress)
 
 }

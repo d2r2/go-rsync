@@ -151,7 +151,7 @@ func parseRsyncURL(rsyncURL string) (user, host, path string) {
 	return
 }
 
-// removeExtraSlash remove excess path divider in RSYNC path.
+// removeExcessSlashChars remove excess path divider in RSYNC path.
 func removeExcessSlashChars(path string) string {
 	var buf bytes.Buffer
 	lastCharIsSlash := false

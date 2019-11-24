@@ -117,6 +117,7 @@ func findDownNonMeasuredDirByWeight(dir *core.Dir, weight int) *core.Dir {
 	}
 }
 
+/*
 func findUpNonMeasuredDirByWeight(dir *core.Dir, weight int) *core.Dir {
 	item := dir
 	parent := item.Parent
@@ -133,6 +134,7 @@ func findUpNonMeasuredDirByWeight(dir *core.Dir, weight int) *core.Dir {
 		parent = item.Parent
 	}
 }
+*/
 
 func MeasureDir(ctx context.Context, password *string, dir *core.Dir, retryCount *int, log *rsync.Logging,
 	blockSize *backupBlockSizeSettings) (int, error) {

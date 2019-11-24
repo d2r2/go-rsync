@@ -31,7 +31,7 @@ func RunRsyncWithRetry(ctx context.Context, options *Options, log *Logging, stdO
 
 		if err == nil {
 			return
-		} else if IsRsyncProcessTerminatedError(err) {
+		} else if IsProcessTerminatedError(err) {
 			sessionErr = err
 			criticalErr = err
 			return
@@ -132,18 +132,13 @@ func runSystemRsync(ctx context.Context, password *string,
 	}
 
 	app := shell.NewApp(RSYNC_CMD, args...)
-	/*
-		if user != nil {
-			app.AddEnvironments([]string{fmt.Sprintf("USER=%s", *user)})
-			lg.Debugf("USER: %v", *user)
-		}
-	*/
 	var passwd string
 	if password != nil {
 		passwd = *password
 	}
-	// always add password, even empty one, for protection for
-	// RSYNC module raise password input via stdin
+	// Always add password variable RSYNC_PASSWORD, even when password not specified
+	// by configuration, for protection from console password stdin input request
+	// for RSYNC module with authentication.
 	app.AddEnvironments([]string{fmt.Sprintf("RSYNC_PASSWORD=%s", passwd)})
 	if passwd != "" {
 		lg.Debugf("PASSWD: %v", passwd)
@@ -154,9 +149,6 @@ func runSystemRsync(ctx context.Context, password *string,
 		return err
 	}
 
-	// stdOutLastLen := -1
-	// stdErrLastLen := -1
-	// for {
 	select {
 	case <-ctx.Done():
 		lg.Debugf("Killing rsync: %v", args)
@@ -164,14 +156,17 @@ func runSystemRsync(ctx context.Context, password *string,
 		if err != nil {
 			return err
 		}
-		return &RsyncProcessTerminatedError{}
+		return &ProcessTerminatedError{}
 	case st := <-waitCh:
+		// Enable RSYNC log output
 		if logEnabled {
 			logBuf.WriteString(RSYNC_CMD)
 			if len(args) > 0 {
 				logBuf.WriteString(" ")
 				logBuf.WriteString(strings.Join(args, " "))
 			}
+			// Enable intensive RSYNC log output, when we save
+			// whole stdout print.
 			if log.EnableIntensiveLog {
 				logBuf.WriteString(fmt.Sprintln())
 				logBuf.WriteString(fmt.Sprintln(">>>>>>>>>>>>>>>> Stdout start >>>>>>>>>>>>>>>>"))
@@ -184,15 +179,9 @@ func runSystemRsync(ctx context.Context, password *string,
 			return st.Error
 		} else if st.ExitCode != 0 {
 			lg.Debugf("STDERR: %v", stdErr.String())
-			return NewRsyncCallFailedError(st.ExitCode, stdErr)
+			return NewCallFailedError(st.ExitCode, stdErr)
 		}
 		return nil
-		// case <-time.After(5 * time.Second):
-		// 	stdOutLastLen = stdOut2.Len()
-		// 	stdErrLastLen = stdErr.Len()
-		// 	lg.Debugf("stdOutLastLen=%v", stdOutLastLen)
-		// 	lg.Debugf("stdErrLastLen=%v", stdErrLastLen)
 	}
-	// }
 	return nil
 }

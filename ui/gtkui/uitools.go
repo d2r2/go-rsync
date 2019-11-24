@@ -1,9 +1,6 @@
 package gtkui
 
 import (
-	"errors"
-	"strconv"
-
 	"github.com/d2r2/gotk3/gdk"
 	"github.com/d2r2/gotk3/glib"
 	"github.com/d2r2/gotk3/gtk"
@@ -12,11 +9,57 @@ import (
 )
 
 // ========================================================================================
-// ************************* GTK GUI UTILITIES SECTION START ******************************
+// ************************* GTK+ UI UTILITIES SECTION START ******************************
 // ========================================================================================
-//	In real application copy this section to separate file as utilities functions to simplify
-//	creation of GLIB/GTK+ components and widgets, including menus, dialog boxes, messages,
+//	In real application use this code section as utilities to simplify creation
+//	of GLIB/GTK+ components and widgets, including menus, dialog boxes, messages,
 //	application settings and so on...
+
+// SetupLabelJustifyRight create GtkLabel with justification to the right by default.
+func SetupLabelJustifyRight(caption string) (*gtk.Label, error) {
+	lbl, err := gtk.LabelNew(caption)
+	if err != nil {
+		return nil, err
+	}
+	lbl.SetHAlign(gtk.ALIGN_END)
+	lbl.SetJustify(gtk.JUSTIFY_RIGHT)
+	return lbl, nil
+}
+
+// SetupLabelMarkupJustifyRight create GtkLabel with justification to the right by default.
+func SetupLabelMarkupJustifyRight(caption *Markup) (*gtk.Label, error) {
+	lbl, err := gtk.LabelNew(caption.String())
+	if err != nil {
+		return nil, err
+	}
+	lbl.SetUseMarkup(true)
+	lbl.SetHAlign(gtk.ALIGN_END)
+	lbl.SetJustify(gtk.JUSTIFY_RIGHT)
+	return lbl, nil
+}
+
+// SetupLabelJustifyLeft create GtkLabel with justification to the left by default.
+func SetupLabelJustifyLeft(caption string) (*gtk.Label, error) {
+	lbl, err := gtk.LabelNew(caption)
+	if err != nil {
+		return nil, err
+	}
+	lbl.SetHAlign(gtk.ALIGN_START)
+	lbl.SetJustify(gtk.JUSTIFY_LEFT)
+	return lbl, nil
+}
+
+// SetupLabelMarkupJustifyLeft create GtkLabel with justification to the left by default.
+func SetupLabelMarkupJustifyLeft(caption *Markup) (*gtk.Label, error) {
+	lbl, err := gtk.LabelNew(caption.String())
+	if err != nil {
+		return nil, err
+	}
+	lbl.SetUseMarkup(true)
+	lbl.SetHAlign(gtk.ALIGN_START)
+	lbl.SetJustify(gtk.JUSTIFY_LEFT)
+	return lbl, nil
+}
 
 // SetupHeader construct Header widget with standard initialization.
 func SetupHeader(title, subtitle string, showCloseButton bool) (*gtk.HeaderBar, error) {
@@ -95,39 +138,115 @@ func SetupButtonWithThemedImage(themedIconName string) (*gtk.Button, error) {
 	return btn, nil
 }
 
+// getPixbufFromBytes create gdk.PixBuf loaded from raw bytes buffer
 func getPixbufFromBytes(bytes []byte) (*gdk.Pixbuf, error) {
 	b2, err := glib.BytesNew(bytes)
 	if err != nil {
 		return nil, err
 	}
-	ms, err := glib.MemoryInputStreamFromBytesNew(b2)
+	pbl, err := gdk.PixbufLoaderNew()
 	if err != nil {
 		return nil, err
 	}
-	pb, err := gdk.PixbufNewFromStream(&ms.InputStream, nil)
+	err = pbl.WriteBytes(b2)
+	if err != nil {
+		return nil, err
+	}
+	err = pbl.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	pb, err := pbl.GetPixbuf()
 	if err != nil {
 		return nil, err
 	}
 	return pb, nil
 }
 
+// getPixbufFromBytesWithResize create gdk.PixBuf loaded from raw bytes buffer, applying resize
+func getPixbufFromBytesWithResize(bytes []byte, resizeToWidth, resizeToHeight int) (*gdk.Pixbuf, error) {
+	b2, err := glib.BytesNew(bytes)
+	if err != nil {
+		return nil, err
+	}
+	pbl, err := gdk.PixbufLoaderNew()
+	if err != nil {
+		return nil, err
+	}
+	pbl.SetSize(resizeToWidth, resizeToHeight)
+	err = pbl.WriteBytes(b2)
+	if err != nil {
+		return nil, err
+	}
+	err = pbl.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	pb, err := pbl.GetPixbuf()
+	if err != nil {
+		return nil, err
+	}
+	return pb, nil
+}
+
+// getPixbufFromBytes create gdk.PixbufAnimation loaded from raw bytes buffer
 func getPixbufAnimationFromBytes(bytes []byte) (*gdk.PixbufAnimation, error) {
 	b2, err := glib.BytesNew(bytes)
 	if err != nil {
 		return nil, err
 	}
-	ms, err := glib.MemoryInputStreamFromBytesNew(b2)
+	pbl, err := gdk.PixbufLoaderNew()
 	if err != nil {
 		return nil, err
 	}
-	pba, err := gdk.PixbufAnimationNewFromStream(&ms.InputStream, nil)
+	err = pbl.WriteBytes(b2)
+	if err != nil {
+		return nil, err
+	}
+	err = pbl.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	pba, err := pbl.GetPixbufAnimation()
 	if err != nil {
 		return nil, err
 	}
 	return pba, nil
 }
 
-// SetupMenuButtonWithThemedImage construct MenuButton widget with image
+// getPixbufFromBytesWithResize create gdk.PixbufAnimation loaded from raw bytes buffer, applying resize
+func getPixbufAnimationFromBytesWithResize(bytes []byte, resizeToWidth,
+	resizeToHeight int) (*gdk.PixbufAnimation, error) {
+
+	b2, err := glib.BytesNew(bytes)
+	if err != nil {
+		return nil, err
+	}
+	pbl, err := gdk.PixbufLoaderNew()
+	if err != nil {
+		return nil, err
+	}
+	pbl.SetSize(resizeToWidth, resizeToHeight)
+	err = pbl.WriteBytes(b2)
+	if err != nil {
+		return nil, err
+	}
+	err = pbl.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	pba, err := pbl.GetPixbufAnimation()
+	if err != nil {
+		return nil, err
+	}
+	return pba, nil
+}
+
+// SetupMenuButtonWithThemedImage construct gtk.MenuButton widget with image
 // taken by themedIconName from themed icons image lib.
 func SetupMenuButtonWithThemedImage(themedIconName string) (*gtk.MenuButton, error) {
 	img, err := gtk.ImageNewFromIconName(themedIconName, gtk.ICON_SIZE_BUTTON)
@@ -145,7 +264,7 @@ func SetupMenuButtonWithThemedImage(themedIconName string) (*gtk.MenuButton, err
 	return btn, nil
 }
 
-// AppendSectionAsHorzButtons used for Popover widget menu
+// AppendSectionAsHorzButtons used for gtk.Popover widget menu
 // as a hint to display items as a horizontal buttons.
 func AppendSectionAsHorzButtons(main, section *glib.Menu) error {
 	val1, err := glib.VariantStringNew("horizontal-buttons")
@@ -163,7 +282,7 @@ func AppendSectionAsHorzButtons(main, section *glib.Menu) error {
 	return nil
 }
 
-// DialogButton simplify Dialog window initialization.
+// DialogButton simplify dialog window initialization.
 // Keep all necessary information about how attached
 // dialog button should look and act.
 type DialogButton struct {
@@ -230,7 +349,7 @@ func IsResponseDeleteEvent(response gtk.ResponseType) bool {
 	return response == gtk.RESPONSE_DELETE_EVENT
 }
 
-// PrintDialogResponse print and debug dialog responce.
+// PrintDialogResponse print and debug dialog response.
 func PrintDialogResponse(response gtk.ResponseType) {
 	if IsResponseNo(response) {
 		lg.Debug("Dialog result = NO")
@@ -262,38 +381,45 @@ type DialogParagraph struct {
 	MaxWidthChars int
 }
 
+// NewDialogParagraph create new text paragraph instance,
+// with default align, justification and so on.
 func NewDialogParagraph(text string) *DialogParagraph {
 	v := &DialogParagraph{Text: text, HorizAlign: gtk.Align(-1), Justify: gtk.Justification(-1),
 		Ellipsize: pango.EllipsizeMode(-1), MaxWidthChars: -1}
 	return v
 }
 
-func NewMarkupDialogParagraph(text string) *DialogParagraph {
-	v := &DialogParagraph{Text: text, Markup: true, HorizAlign: gtk.Align(-1), Justify: gtk.Justification(-1),
-		Ellipsize: pango.EllipsizeMode(-1), MaxWidthChars: -1}
+// SetMarkup update Markup flag.
+func (v *DialogParagraph) SetMarkup(markup bool) *DialogParagraph {
+	v.Markup = markup
 	return v
 }
 
+// SetHorizAlign set horizontal alignment of text paragraph.
 func (v *DialogParagraph) SetHorizAlign(align gtk.Align) *DialogParagraph {
 	v.HorizAlign = align
 	return v
 }
 
+// SetJustify set text justification.
 func (v *DialogParagraph) SetJustify(justify gtk.Justification) *DialogParagraph {
 	v.Justify = justify
 	return v
 }
 
+// SetEllipsize set text ellipsis mode.
 func (v *DialogParagraph) SetEllipsize(ellipsize pango.EllipsizeMode) *DialogParagraph {
 	v.Ellipsize = ellipsize
 	return v
 }
 
+// SetMaxWidthChars set maximum number of chars in one line.
 func (v *DialogParagraph) SetMaxWidthChars(maxWidthChars int) *DialogParagraph {
 	v.MaxWidthChars = maxWidthChars
 	return v
 }
 
+// createLabel create gtk.Label widget to put paragraph text in.
 func (v *DialogParagraph) createLabel() (*gtk.Label, error) {
 	lbl, err := gtk.LabelNew("")
 	if err != nil {
@@ -319,6 +445,7 @@ func (v *DialogParagraph) createLabel() (*gtk.Label, error) {
 	return lbl, nil
 }
 
+// TextToDialogParagraphs multi-line text to DialogParagraph instance.
 func TextToDialogParagraphs(lines []string) []*DialogParagraph {
 	var msgs []*DialogParagraph
 	for _, line := range lines {
@@ -327,18 +454,23 @@ func TextToDialogParagraphs(lines []string) []*DialogParagraph {
 	return msgs
 }
 
-func TextToMarkupDialogParagraphs(lines []string) []*DialogParagraph {
+// TextToMarkupDialogParagraphs multi-line markup text to DialogParagraph instance.
+func TextToMarkupDialogParagraphs(makrupLines []string) []*DialogParagraph {
 	var msgs []*DialogParagraph
-	for _, line := range lines {
-		msgs = append(msgs, NewMarkupDialogParagraph(line))
+	for _, markupLine := range makrupLines {
+		msgs = append(msgs, NewDialogParagraph(markupLine).SetMarkup(true))
 	}
 	return msgs
+}
+
+type MessageDialog struct {
+	dialog *gtk.MessageDialog
 }
 
 // SetupMessageDialog construct MessageDialog widget with customized settings.
 func SetupMessageDialog(parent *gtk.Window, markupTitle string, secondaryMarkupTitle string,
 	paragraphs []*DialogParagraph, addButtons []DialogButton,
-	addExtraControls func(area *gtk.Box) error) (*gtk.MessageDialog, error) {
+	addExtraControls func(area *gtk.Box) error) (*MessageDialog, error) {
 
 	var active *gtk.Window
 	var err error
@@ -425,27 +557,22 @@ func SetupMessageDialog(parent *gtk.Window, markupTitle string, secondaryMarkupT
 
 	box.ShowAll()
 
-	return dlg, nil
+	v := &MessageDialog{dialog: dlg}
+	return v, nil
 }
 
-// RunMessageDialog construct and run MessageDialog widget with customized settings.
-func RunMessageDialog(parent *gtk.Window, markupTitle string, secondaryMarkupTitle string,
-	paragraphs []*DialogParagraph, ignoreCloseBox bool, addButtons []DialogButton,
-	addExtraControls func(area *gtk.Box) error) (gtk.ResponseType, error) {
+// Run run MessageDialog widget with customized settings.
+func (v *MessageDialog) Run(ignoreCloseBox bool) gtk.ResponseType {
 
-	dlg, err := SetupMessageDialog(parent, markupTitle, secondaryMarkupTitle,
-		paragraphs, addButtons, addExtraControls)
-	if err != nil {
-		return 0, err
-	}
-	defer dlg.Destroy()
+	defer v.dialog.Destroy()
 
-	dlg.ShowAll()
-	res := dlg.Run()
+	v.dialog.ShowAll()
+	var res gtk.ResponseType
+	res = v.dialog.Run()
 	for gtk.ResponseType(res) == gtk.RESPONSE_NONE || gtk.ResponseType(res) == gtk.RESPONSE_DELETE_EVENT && ignoreCloseBox {
-		res = dlg.Run()
+		res = v.dialog.Run()
 	}
-	return gtk.ResponseType(res), nil
+	return gtk.ResponseType(res)
 }
 
 // SetupDialog construct Dialog widget with customized settings.
@@ -600,17 +727,20 @@ func RunDialog(parent *gtk.Window, messageType gtk.MessageType, userHeaderbar bo
 	return gtk.ResponseType(res), nil
 }
 
+// ErrorMessage build and run error message dialog.
 func ErrorMessage(parent *gtk.Window, titleMarkup string, text []*DialogParagraph) error {
 	buttons := []DialogButton{
 		{"_OK", gtk.RESPONSE_OK, false, nil},
 	}
-	_, err := RunMessageDialog(parent, titleMarkup, "", text, false, buttons, nil)
+	dialog, err := SetupMessageDialog(parent, titleMarkup, "", text, buttons, nil)
 	if err != nil {
 		return err
 	}
+	dialog.Run(false)
 	return nil
 }
 
+// QuestionDialog build and run question message dialog with Yes/No choice.
 func QuestionDialog(parent *gtk.Window, title string,
 	messages []*DialogParagraph, defaultYes bool) (bool, error) {
 
@@ -753,21 +883,16 @@ func GetGlibVersion() (magor, minor, micro uint) {
 	return
 }
 
-// GetSchema obtains glib.SettingsSchema from glib.Settings.
-func GetSchema(v *glib.Settings) (*glib.SettingsSchema, error) {
-	val, err := v.GetProperty("settings-schema")
-	if err != nil {
-		return nil, err
-	}
-	if schema, ok := val.(*glib.SettingsSchema); ok {
-		return schema, nil
-	} else {
-		return nil, errors.New("GLib settings-schema property is not convertible to SettingsSchema")
-	}
+// GetGdkVersion return actually installed GDK version.
+func GetGdkVersion() (magor, minor, micro uint) {
+	magor = gdk.GetMajorVersion()
+	minor = gdk.GetMinorVersion()
+	micro = gdk.GetMicroVersion()
+	return
 }
 
-// FixProgressBarCSS eliminate issue with default GtkProgressBar control formating.
-func applyStyleCSS(widget *gtk.Widget, css string) error {
+// ApplyStyleCSS apply custom CSS to specific widget.
+func ApplyStyleCSS(widget *gtk.Widget, css string) error {
 	//	provider, err := gtk.CssProviderNew()
 	provider, err := gtk.CssProviderNew()
 	if err != nil {
@@ -782,175 +907,67 @@ func applyStyleCSS(widget *gtk.Widget, css string) error {
 		return err
 	}
 	sc.AddProvider(provider, gtk.STYLE_PROVIDER_PRIORITY_USER)
-	//sc.AddClass("osd")
 	return nil
 }
 
-// Binding cache link between Key string identifier and GLIB object property.
-// Code taken from https://github.com/gnunn1/tilix project.
-type Binding struct {
-	Key      string
-	Object   glib.IObject
-	Property string
-	Flags    glib.SettingsBindFlags
-}
-
-// BindingHelper is a bookkeeping class that keeps track of objects which are
-// binded to a GSettings object so they can be unbinded later. it
-// also supports the concept of deferred bindings where a binding
-// can be added but is not actually attached to a Settings object
-// until one is set.
-type BindingHelper struct {
-	bindings []Binding
-	settings *glib.Settings
-}
-
-// BindingHelperNew creates new BindingHelper object.
-func BindingHelperNew(settings *glib.Settings) *BindingHelper {
-	bh := &BindingHelper{settings: settings}
-	return bh
-}
-
-// SetSettings will replace underlying GLIB Settings object to unbind
-// previously set bindings and re-bind to the new settings automatically.
-func (v *BindingHelper) SetSettings(value *glib.Settings) {
-	if value != v.settings {
-		if v.settings != nil {
-			v.Unbind()
-		}
-		v.settings = value
-		if v.settings != nil {
-			v.bindAll()
-		}
-	}
-}
-
-func (v *BindingHelper) bindAll() {
-	if v.settings != nil {
-		for _, b := range v.bindings {
-			v.settings.Bind(b.Key, b.Object, b.Property, b.Flags)
-		}
-	}
-}
-
-// addBind add a binding to the list
-func (v *BindingHelper) addBind(key string, object glib.IObject, property string, flags glib.SettingsBindFlags) {
-	v.bindings = append(v.bindings, Binding{key, object, property, flags})
-}
-
-// Bind add a binding to list and binds to Settings if it is set.
-func (v *BindingHelper) Bind(key string, object glib.IObject, property string, flags glib.SettingsBindFlags) {
-	v.addBind(key, object, property, flags)
-	if v.settings != nil {
-		v.settings.Bind(key, object, property, flags)
-	}
-}
-
-// Unbind all added binds from settings object.
-func (v *BindingHelper) Unbind() {
-	for _, b := range v.bindings {
-		v.settings.Unbind(b.Object, b.Property)
-	}
-}
-
-// Clear unbind all bindings and clears list of bindings.
-func (v *BindingHelper) Clear() {
-	v.Unbind()
-	v.bindings = nil
-}
-
-// SettingsArray is a way how to create multiple (indexed) GLib setting's group.
-// For instance, multiple backup profiles with identical
-// settings inside of each profile. Either each backup profile may
-// contain more than one data source for backup.
-type SettingsArray struct {
-	settings *glib.Settings
-	arrayID  string
-}
-
-func NewSettingsArray(settings *glib.Settings, arrayID string) *SettingsArray {
-	v := &SettingsArray{settings: settings, arrayID: arrayID}
-	return v
-}
-
-func (v *SettingsArray) DeleteNode(childSettings *glib.Settings, nodeID string) error {
-	schema, err := GetSchema(childSettings)
+// AddStyleClasses apply specific CSS style classes to the widget.
+func AddStyleClasses(widget *gtk.Widget, cssClasses []string) error {
+	sc, err := widget.GetStyleContext()
 	if err != nil {
 		return err
 	}
-	keys := schema.ListKeys()
-	lg.Debug(spew.Sprintf("%+v", keys))
-	for _, key := range keys {
-		childSettings.Reset(key)
+	for _, className := range cssClasses {
+		sc.AddClass(className)
 	}
-
-	sources := v.settings.GetStrv(v.arrayID)
-	var newSources []string
-	for _, id := range sources {
-		if id != nodeID {
-			newSources = append(newSources, id)
-		}
-	}
-	v.settings.SetStrv(v.arrayID, newSources)
 	return nil
 }
 
-func (v *SettingsArray) AddNode() (nodeID string, err error) {
-	sources := v.settings.GetStrv(v.arrayID)
-	var ni int
-	if len(sources) > 0 {
-		ni, err = strconv.Atoi(sources[len(sources)-1])
-		if err != nil {
-			return "", err
-		}
-		ni++
-	}
-	//lg.Println(spew.Sprintf("New node id: %+v", ni))
-	sources = append(sources, strconv.Itoa(ni))
-	v.settings.SetStrv(v.arrayID, sources)
-	return sources[len(sources)-1], nil
-}
-
-func (v *SettingsArray) GetArrayIDs() []string {
-	sources := v.settings.GetStrv(v.arrayID)
-	return sources
-}
-
-// ControlWithStatus wraps control to the box to attach extra status widget to the left.
-// Status widget would be a error icon either spin control to show active process.
-type ControlWithStatus struct {
-	box       *gtk.Box
-	control   gtk.IWidget
-	statusBox *gtk.Box
-}
-
-func NewControlWithStatus(control gtk.IWidget) (*ControlWithStatus, error) {
-	box, err := gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 6)
+// AddStyleClass apply specific CSS style class to the widget.
+func AddStyleClass(widget *gtk.Widget, cssClass string) error {
+	sc, err := widget.GetStyleContext()
 	if err != nil {
-		return nil, err
+		return err
 	}
-	box.Add(control)
-	box.SetHExpand(true)
-	v := &ControlWithStatus{box: box, control: control}
-	return v, nil
+	sc.AddClass(cssClass)
+	return nil
 }
 
-func (v *ControlWithStatus) ReplaceStatus(statusBox *gtk.Box) {
-	if v.statusBox != nil {
-		v.statusBox.Destroy()
-		v.statusBox = nil
+// RemoveStyleClass remove specific CSS style class from the widget.
+func RemoveStyleClass(widget *gtk.Widget, cssClass string) error {
+	sc, err := widget.GetStyleContext()
+	if err != nil {
+		return err
 	}
-	if statusBox != nil {
-		v.statusBox = statusBox
-		v.box.Add(statusBox)
-		v.box.ShowAll()
-	}
+	sc.RemoveClass(cssClass)
+	return nil
 }
 
-func (v *ControlWithStatus) GetBox() *gtk.Box {
-	return v.box
+// RemoveStyleClasses remove specific CSS style classes from the widget.
+func RemoveStyleClasses(widget *gtk.Widget, cssClasses []string) error {
+	sc, err := widget.GetStyleContext()
+	if err != nil {
+		return err
+	}
+	for _, className := range cssClasses {
+		sc.RemoveClass(className)
+	}
+	return nil
+}
+
+// RemoveStyleClassesAll remove all style classes from the widget.
+func RemoveStyleClassesAll(widget *gtk.Widget) error {
+	sc, err := widget.GetStyleContext()
+	if err != nil {
+		return err
+	}
+	list := sc.ListClasses()
+	list.Foreach(func(item interface{}) {
+		cssClass := item.(string)
+		sc.RemoveClass(cssClass)
+	})
+	return nil
 }
 
 // ========================================================================================
-// ************************* GTK GUI UTILITIES SECTION END ********************************
+// ************************* GTK+ UI UTILITIES SECTION END ********************************
 // ========================================================================================

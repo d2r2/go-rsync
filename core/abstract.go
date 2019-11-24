@@ -5,15 +5,10 @@ package core
 type FolderBackupType int
 
 const (
-	// Undefined backup approach.
-	FBT_UNKNOWN FolderBackupType = iota
-	// Skip to backup folder content (including subfolders).
-	FBT_SKIP
-	// Backup full folder content including all subfolders.
-	FBT_RECURSIVE
-	// Backup only files located directly in the folder.
-	// Do not backup subfolders.
-	FBT_CONTENT
+	FBT_UNKNOWN   FolderBackupType = iota // Undefined backup approach.
+	FBT_SKIP                              // Skip to backup folder content (including subfolders).
+	FBT_RECURSIVE                         // Backup full folder content including all subfolders.
+	FBT_CONTENT                           // Backup only files located directly in the folder. Do not backup subfolders.
 )
 
 // String implement Stringer interface.
@@ -91,7 +86,7 @@ func NewProgressSkipped(size FolderSize) SizeProgress {
 	return this
 }
 
-// NewProgressSkipped creates the SizeProgress object
+// NewProgressFailed creates the SizeProgress object
 // with the size that was not backed up due to some issues.
 func NewProgressFailed(size FolderSize) SizeProgress {
 	this := SizeProgress{Failed: &size}

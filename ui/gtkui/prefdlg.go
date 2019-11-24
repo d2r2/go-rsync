@@ -12,7 +12,6 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/d2r2/go-rsync/core"
 	"github.com/d2r2/go-rsync/locale"
 	"github.com/d2r2/go-rsync/rsync"
 	"github.com/d2r2/gotk3/glib"
@@ -26,28 +25,22 @@ const (
 	STOCK_OK_ICON            = "emblem-ok-symbolic"
 	STOCK_QUESTION_ICON      = "dialog-question-symbolic"
 	STOCK_SYNCHRONIZING_ICON = "emblem-synchronizing-symbolic"
-	ASSET_SYNCHRONIZING_ICON = "emblem-synchronizing-cyan.gif"
-	STOCK_IMPORTANT_ICON     = "emblem-important-symbolic"
-	ASSET_IMPORTANT_ICON     = "emblem-important-red.gif"
+	// ASSET_SYNCHRONIZING_CYAN_ICON   = "emblem-synchronizing-cyan.gif"
+	// ASSET_SYNCHRONIZING_YELLOW_ICON = "emblem-synchronizing-yellow.gif"
+	// ASSET_SYNCHRONIZING_ICON        = ASSET_SYNCHRONIZING_CYAN_ICON
+	// ASSET_SYNCHRONIZING_ANIMATED_64x64_ICON = "loading_animated_64x64.gif"
+	// ASSET_SYNCHRONIZING_FRAME8_64x64_ICON   = "loading_frame%d_64x64.gif"
+	STOCK_IMPORTANT_ICON = "emblem-important-symbolic"
+	// ASSET_IMPORTANT_ICON     = "emblem-important-red.gif"
 	STOCK_NETWORK_ERROR_ICON = "network-error-symbolic"
+	STOCK_DELETE_ICON        = "edit-delete-symbolic"
 )
 
-// return error describing issue with conversion from one type to another.
+// Return error describing issue with conversion from one type to another.
 func validatorConversionError(fromType, toType string) error {
 	msg := spew.Sprintf("Can't convert %[1]v to %[2]v", fromType, toType)
 	err := errors.New(msg)
 	return err
-}
-
-// setupLabelJustifyRight create GtkLabel with justification to the right by default.
-func setupLabelJustifyRight(caption string) (*gtk.Label, error) {
-	lbl, err := gtk.LabelNew(caption)
-	if err != nil {
-		return nil, err
-	}
-	lbl.SetHAlign(gtk.ALIGN_END)
-	lbl.SetJustify(gtk.JUSTIFY_RIGHT)
-	return lbl, nil
 }
 
 const (
@@ -57,18 +50,21 @@ const (
 	DesignTotalColCount = 6
 )
 
-// Create preference dialog with "General" page, where controls
-// being bound to GLib Setting object to save/restore functionality.
-func GeneralPreferencesNew(gsSettings *glib.Settings) (*gtk.Container, error) {
+// GeneralPreferencesNew create preference dialog with "General" page, where controls
+// being bound to GLib setting object to save/restore functionality.
+func GeneralPreferencesNew(appSettings *SettingsStore) (*gtk.Container, error) {
 	box, err := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 6)
 	if err != nil {
 		return nil, err
 	}
 	SetAllMargins(box, 18)
 
-	bh := BindingHelperNew(gsSettings)
+	bh := appSettings.NewBindingHelper()
 
 	grid, err := gtk.GridNew()
+	if err != nil {
+		return nil, err
+	}
 	grid.SetColumnSpacing(12)
 	grid.SetRowSpacing(6)
 	row := 0
@@ -78,12 +74,7 @@ func GeneralPreferencesNew(gsSettings *glib.Settings) (*gtk.Container, error) {
 	// ---------------------------------------------------------
 	markup := NewMarkup(MARKUP_WEIGHT_BOLD, 0, 0,
 		locale.T(MsgPrefDlgGeneralUserInterfaceOptionsSecion, nil), "")
-	lbl, err := gtk.LabelNew(markup.String())
-	if err != nil {
-		return nil, err
-	}
-	lbl.SetUseMarkup(true)
-	lbl.SetHAlign(gtk.ALIGN_START)
+	lbl, err := SetupLabelMarkupJustifyLeft(markup)
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +82,7 @@ func GeneralPreferencesNew(gsSettings *glib.Settings) (*gtk.Container, error) {
 	row++
 
 	// Option to show about dialog on application startup
-	lbl, err = setupLabelJustifyRight(locale.T(MsgPrefDlgDoNotShowAtAppStartupCaption, nil))
+	lbl, err = SetupLabelJustifyRight(locale.T(MsgPrefDlgDoNotShowAtAppStartupCaption, nil))
 	if err != nil {
 		return nil, err
 	}
@@ -118,7 +109,7 @@ func GeneralPreferencesNew(gsSettings *glib.Settings) (*gtk.Container, error) {
 	row++
 
 	// Show desktop notification on backup completion
-	lbl, err = setupLabelJustifyRight(locale.T(MsgPrefDlgPerformDesktopNotificationCaption, nil))
+	lbl, err = SetupLabelJustifyRight(locale.T(MsgPrefDlgPerformDesktopNotificationCaption, nil))
 	if err != nil {
 		return nil, err
 	}
@@ -146,7 +137,7 @@ func GeneralPreferencesNew(gsSettings *glib.Settings) (*gtk.Container, error) {
 	row++
 
 	// UI Language
-	lbl, err = setupLabelJustifyRight(locale.T(MsgPrefDlgLanguageCaption, nil))
+	lbl, err = SetupLabelJustifyRight(locale.T(MsgPrefDlgLanguageCaption, nil))
 	if err != nil {
 		return nil, err
 	}
@@ -166,7 +157,7 @@ func GeneralPreferencesNew(gsSettings *glib.Settings) (*gtk.Container, error) {
 	row++
 
 	// Session log font size
-	lbl, err = setupLabelJustifyRight(locale.T(MsgPrefDlgSessionLogControlFontSizeCaption, nil))
+	lbl, err = SetupLabelJustifyRight(locale.T(MsgPrefDlgSessionLogControlFontSizeCaption, nil))
 	if err != nil {
 		return nil, err
 	}
@@ -202,12 +193,7 @@ func GeneralPreferencesNew(gsSettings *glib.Settings) (*gtk.Container, error) {
 	// ---------------------------------------------------------
 	markup = NewMarkup(MARKUP_WEIGHT_BOLD, 0, 0,
 		locale.T(MsgPrefDlgGeneralBackupSettingsSection, nil), "")
-	lbl, err = gtk.LabelNew(markup.String())
-	if err != nil {
-		return nil, err
-	}
-	lbl.SetUseMarkup(true)
-	lbl.SetHAlign(gtk.ALIGN_START)
+	lbl, err = SetupLabelMarkupJustifyLeft(markup)
 	if err != nil {
 		return nil, err
 	}
@@ -215,7 +201,7 @@ func GeneralPreferencesNew(gsSettings *glib.Settings) (*gtk.Container, error) {
 	row++
 
 	// Ignore file signature
-	lbl, err = setupLabelJustifyRight(locale.T(MsgPrefDlgSkipFolderBackupFileSignatureCaption, nil))
+	lbl, err = SetupLabelJustifyRight(locale.T(MsgPrefDlgSkipFolderBackupFileSignatureCaption, nil))
 	if err != nil {
 		return nil, err
 	}
@@ -305,13 +291,13 @@ func GeneralPreferencesNew(gsSettings *glib.Settings) (*gtk.Container, error) {
 // GetSubpathRegexp verify that proposed file system path expression is valid.
 // Understand path separator for different OS, taking path separator setting from runtime.
 //
-// Use Microsoft Windows restriction list taken from here:
+// Use Microsoft Windows restriction character list taken from here:
 // https://stackoverflow.com/questions/1976007/what-characters-are-forbidden-in-windows-and-linux-directory-names
 //
-// Linux/Unix:
+// Linux/Unix forbidden chars for folder names:
 // / (forward slash)
 //
-// Windows:
+// Windows forbidden chars for folder names:
 // < (less than)
 // > (greater than)
 // : (colon - sometimes works, but is actually NTFS Alternate Data Streams)
@@ -321,6 +307,8 @@ func GeneralPreferencesNew(gsSettings *glib.Settings) (*gtk.Container, error) {
 // | (vertical bar or pipe)
 // ? (question mark)
 // * (asterisk)
+//
+// TODO: do not catch folder names consist from whitespace characters only. Fix it.
 //
 func GetSubpathRegexp() (*regexp.Regexp, error) {
 	template := spew.Sprintf(`^\%[1]c?([^\<\>\:\"\|\?\*\%[1]c]+\%[1]c?)*$`, os.PathSeparator)
@@ -339,16 +327,8 @@ func RestartTimer(timer *time.Timer, milliseconds time.Duration) {
 	timer.Reset(time.Millisecond * milliseconds)
 }
 
-func createBackupSourceBlock(profileID, sourceID string, gsSettings *glib.Settings,
-	prefRow *PreferenceRow, validator *UIValidator, profileChanged *bool) (gtk.IWidget, error) {
-	//	frame, err := gtk.FrameNew("")
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//	frame.SetShadowType(gtk.SHADOW_ETCHED_OUT)
-
-	rsyncPathGroupName := spew.Sprintf("RsyncPath_%v_%v", profileID, sourceID)
-	destSubPathGroupName := spew.Sprintf("DestSubpath_%v", profileID)
+func createBackupSourceBlock(profileID, sourceID string, sourceSettings *SettingsStore,
+	prefRow *PreferenceRow, validator *UIValidator) (gtk.IWidget, error) {
 
 	box, err := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 6)
 	if err != nil {
@@ -356,7 +336,7 @@ func createBackupSourceBlock(profileID, sourceID string, gsSettings *glib.Settin
 	}
 	SetAllMargins(box, 18)
 
-	bh := BindingHelperNew(gsSettings)
+	bh := sourceSettings.NewBindingHelper()
 
 	grid, err := gtk.GridNew()
 	grid.SetColumnSpacing(12)
@@ -365,38 +345,255 @@ func createBackupSourceBlock(profileID, sourceID string, gsSettings *glib.Settin
 	row := 0
 
 	// Source rsync path
-	lbl, err := setupLabelJustifyRight(locale.T(MsgPrefDlgSourceRsyncPathCaption, nil))
+	markup := NewMarkup(MARKUP_WEIGHT_NORMAL, 0, 0,
+		locale.T(MsgPrefDlgSourceRsyncPathCaption, nil), "")
+	lbl, err := SetupLabelMarkupJustifyLeft(markup)
 	if err != nil {
 		return nil, err
 	}
-	lbl.SetUseMarkup(true)
 	grid.Attach(lbl, 0, row, 1, 1)
 	edRsyncPath, err := gtk.EntryNew()
 	if err != nil {
 		return nil, err
 	}
 	edRsyncPath.SetHExpand(true)
-	//edRsyncPath.SetIconFromIconName(gtk.ENTRY_ICON_SECONDARY, STOCK_QUESTION_ICON)
 	edRsyncPath.SetIconTooltipText(gtk.ENTRY_ICON_SECONDARY, locale.T(MsgPrefDlgSourceRsyncPathRetryHint, nil))
 
 	grid.Attach(edRsyncPath, 1, row, 1, 1)
 	row++
 
 	// Destination root path
-	lbl, err = setupLabelJustifyRight(locale.T(MsgPrefDlgDestinationSubpathCaption, nil))
+	markup = NewMarkup(MARKUP_WEIGHT_NORMAL, 0, 0,
+		locale.T(MsgPrefDlgDestinationSubpathCaption, nil), "")
+	lbl, err = SetupLabelMarkupJustifyLeft(markup)
 	if err != nil {
 		return nil, err
 	}
-	lbl.SetUseMarkup(true)
 	grid.Attach(lbl, 0, row, 1, 1)
 	edDestSubpath, err := gtk.EntryNew()
 	if err != nil {
 		return nil, err
 	}
-	//edDestSubpath.SetIconFromIconName(gtk.ENTRY_ICON_SECONDARY, STOCK_OK_ICON)
 	edDestSubpath.SetTooltipText(locale.T(MsgPrefDlgDestinationSubpathHint, nil))
 	grid.Attach(edDestSubpath, 1, row, 1, 1)
 	row++
+
+	// Override RSYNC transfer options
+	expOverrideRsyncTransferOptions, err := gtk.ExpanderNew(
+		locale.T(MsgPrefDlgOverrideRsyncTransferOptionsBoxCaption, nil))
+	if err != nil {
+		return nil, err
+	}
+	expOverrideRsyncTransferOptions.SetTooltipText(
+		locale.T(MsgPrefDlgOverrideRsyncTransferOptionsBoxHint, nil))
+	grid.Attach(expOverrideRsyncTransferOptions, 0, row, 2, 1)
+	row++
+
+	box4, err := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 6)
+	if err != nil {
+		return nil, err
+	}
+	SetMargins(box4, 0, 9, 0, 9)
+	expOverrideRsyncTransferOptions.Add(box4)
+
+	frame2, err := gtk.FrameNew("")
+	if err != nil {
+		return nil, err
+	}
+	box4.PackStart(frame2, true, true, 0)
+
+	box5, err := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 6)
+	if err != nil {
+		return nil, err
+	}
+	SetMargins(box5, 18, 9, 18, 9)
+	frame2.Add(box5)
+
+	grid3, err := gtk.GridNew()
+	grid3.SetColumnSpacing(12)
+	grid3.SetRowSpacing(6)
+	grid3.SetHAlign(gtk.ALIGN_FILL)
+	box5.PackStart(grid3, true, true, 0)
+	row3 := 0
+
+	// Enable/disable RSYNC transfer source owner
+	cbTransferSourceOwner, err := gtk.CheckButtonNew()
+	if err != nil {
+		return nil, err
+	}
+	cbTransferSourceOwner.SetLabel(locale.T(MsgPrefDlgRsyncTransferSourceOwnerCaption, nil))
+	cbTransferSourceOwner.SetTooltipText(locale.T(MsgPrefDlgRsyncTransferSourceOwnerHint, nil))
+	cbTransferSourceOwner.SetHAlign(gtk.ALIGN_START)
+	bh.Bind(CFG_RSYNC_TRANSFER_SOURCE_OWNER_INCONSISTENT, cbTransferSourceOwner, "inconsistent", glib.SETTINGS_BIND_DEFAULT)
+	bh.Bind(CFG_RSYNC_TRANSFER_SOURCE_OWNER, cbTransferSourceOwner, "active", glib.SETTINGS_BIND_DEFAULT)
+
+	cbTransferSourceOwnerHandlerEnabled := true
+	_, err = cbTransferSourceOwner.Connect("clicked", func(checkBox *gtk.CheckButton) {
+		if cbTransferSourceOwnerHandlerEnabled {
+			if checkBox.GetInconsistent() {
+				checkBox.SetInconsistent(false)
+			} else if !checkBox.GetInconsistent() && checkBox.GetActive() {
+				checkBox.SetInconsistent(true)
+				cbTransferSourceOwnerHandlerEnabled = false
+				checkBox.SetActive(false)
+				cbTransferSourceOwnerHandlerEnabled = true
+			}
+		}
+	})
+	if err != nil {
+		return nil, err
+	}
+	grid3.Attach(cbTransferSourceOwner, DesignFirstCol, row3, 1, 1)
+
+	// Enable/disable RSYNC transfer source group
+	cbTransferSourceGroup, err := gtk.CheckButtonNew()
+	if err != nil {
+		return nil, err
+	}
+	cbTransferSourceGroup.SetLabel(locale.T(MsgPrefDlgRsyncTransferSourceGroupCaption, nil))
+	cbTransferSourceGroup.SetTooltipText(locale.T(MsgPrefDlgRsyncTransferSourceGroupHint, nil))
+	cbTransferSourceGroup.SetHAlign(gtk.ALIGN_START)
+	bh.Bind(CFG_RSYNC_TRANSFER_SOURCE_GROUP_INCONSISTENT, cbTransferSourceGroup, "inconsistent", glib.SETTINGS_BIND_DEFAULT)
+	bh.Bind(CFG_RSYNC_TRANSFER_SOURCE_GROUP, cbTransferSourceGroup, "active", glib.SETTINGS_BIND_DEFAULT)
+
+	cbTransferSourceGroupHandlerEnabled := true
+	_, err = cbTransferSourceGroup.Connect("clicked", func(checkBox *gtk.CheckButton) {
+		if cbTransferSourceGroupHandlerEnabled {
+			if checkBox.GetInconsistent() {
+				checkBox.SetInconsistent(false)
+			} else if !checkBox.GetInconsistent() && checkBox.GetActive() {
+				checkBox.SetInconsistent(true)
+				cbTransferSourceGroupHandlerEnabled = false
+				checkBox.SetActive(false)
+				cbTransferSourceGroupHandlerEnabled = true
+			}
+		}
+	})
+	if err != nil {
+		return nil, err
+	}
+	grid3.Attach(cbTransferSourceGroup, DesignSecondCol, row3, 1, 1)
+	row3++
+
+	// Enable/disable RSYNC transfer source permissions
+	cbTransferSourcePermissions, err := gtk.CheckButtonNew()
+	if err != nil {
+		return nil, err
+	}
+	cbTransferSourcePermissions.SetLabel(locale.T(MsgPrefDlgRsyncTransferSourcePermissionsCaption, nil))
+	cbTransferSourcePermissions.SetTooltipText(locale.T(MsgPrefDlgRsyncTransferSourcePermissionsHint, nil))
+	cbTransferSourcePermissions.SetHAlign(gtk.ALIGN_START)
+	bh.Bind(CFG_RSYNC_TRANSFER_SOURCE_PERMISSIONS_INCONSISTENT, cbTransferSourcePermissions,
+		"inconsistent", glib.SETTINGS_BIND_DEFAULT)
+	bh.Bind(CFG_RSYNC_TRANSFER_SOURCE_PERMISSIONS, cbTransferSourcePermissions,
+		"active", glib.SETTINGS_BIND_DEFAULT)
+
+	cbTransferSourcePermissionsHandlerEnabled := true
+	_, err = cbTransferSourcePermissions.Connect("clicked", func(checkBox *gtk.CheckButton) {
+		if cbTransferSourcePermissionsHandlerEnabled {
+			if checkBox.GetInconsistent() {
+				checkBox.SetInconsistent(false)
+			} else if !checkBox.GetInconsistent() && checkBox.GetActive() {
+				checkBox.SetInconsistent(true)
+				cbTransferSourcePermissionsHandlerEnabled = false
+				checkBox.SetActive(false)
+				cbTransferSourcePermissionsHandlerEnabled = true
+			}
+		}
+	})
+	if err != nil {
+		return nil, err
+	}
+	grid3.Attach(cbTransferSourcePermissions, DesignFirstCol, row3, 1, 1)
+
+	// Enable/disable RSYNC symlinks recreation
+	cbRecreateSymlinks, err := gtk.CheckButtonNew()
+	if err != nil {
+		return nil, err
+	}
+	cbRecreateSymlinks.SetLabel(locale.T(MsgPrefDlgRsyncRecreateSymlinksCaption, nil))
+	cbRecreateSymlinks.SetTooltipText(locale.T(MsgPrefDlgRsyncRecreateSymlinksHint, nil))
+	cbRecreateSymlinks.SetHAlign(gtk.ALIGN_START)
+	bh.Bind(CFG_RSYNC_RECREATE_SYMLINKS_INCONSISTENT, cbRecreateSymlinks, "inconsistent", glib.SETTINGS_BIND_DEFAULT)
+	bh.Bind(CFG_RSYNC_RECREATE_SYMLINKS, cbRecreateSymlinks, "active", glib.SETTINGS_BIND_DEFAULT)
+
+	cbRecreateSymlinksHandlerEnabled := true
+	_, err = cbRecreateSymlinks.Connect("clicked", func(checkBox *gtk.CheckButton) {
+		if cbRecreateSymlinksHandlerEnabled {
+			if checkBox.GetInconsistent() {
+				checkBox.SetInconsistent(false)
+			} else if !checkBox.GetInconsistent() && checkBox.GetActive() {
+				checkBox.SetInconsistent(true)
+				cbRecreateSymlinksHandlerEnabled = false
+				checkBox.SetActive(false)
+				cbRecreateSymlinksHandlerEnabled = true
+			}
+		}
+	})
+	if err != nil {
+		return nil, err
+	}
+	grid3.Attach(cbRecreateSymlinks, DesignSecondCol, row3, 1, 1)
+	row3++
+
+	// Enable/disable RSYNC transfer device files
+	cbTransferDeviceFiles, err := gtk.CheckButtonNew()
+	if err != nil {
+		return nil, err
+	}
+	cbTransferDeviceFiles.SetLabel(locale.T(MsgPrefDlgRsyncTransferDeviceFilesCaption, nil))
+	cbTransferDeviceFiles.SetTooltipText(locale.T(MsgPrefDlgRsyncTransferDeviceFilesHint, nil))
+	cbTransferDeviceFiles.SetHAlign(gtk.ALIGN_START)
+	bh.Bind(CFG_RSYNC_TRANSFER_DEVICE_FILES_INCONSISTENT, cbTransferDeviceFiles, "inconsistent", glib.SETTINGS_BIND_DEFAULT)
+	bh.Bind(CFG_RSYNC_TRANSFER_DEVICE_FILES, cbTransferDeviceFiles, "active", glib.SETTINGS_BIND_DEFAULT)
+
+	cbTransferDeviceFilesHandlerEnabled := true
+	_, err = cbTransferDeviceFiles.Connect("clicked", func(checkBox *gtk.CheckButton) {
+		if cbTransferDeviceFilesHandlerEnabled {
+			if checkBox.GetInconsistent() {
+				checkBox.SetInconsistent(false)
+			} else if !checkBox.GetInconsistent() && checkBox.GetActive() {
+				checkBox.SetInconsistent(true)
+				cbTransferDeviceFilesHandlerEnabled = false
+				checkBox.SetActive(false)
+				cbTransferDeviceFilesHandlerEnabled = true
+			}
+		}
+	})
+	if err != nil {
+		return nil, err
+	}
+	grid3.Attach(cbTransferDeviceFiles, DesignFirstCol, row3, 1, 1)
+
+	// Enable/disable RSYNC transfer special files
+	cbTransferSpecialFiles, err := gtk.CheckButtonNew()
+	if err != nil {
+		return nil, err
+	}
+	cbTransferSpecialFiles.SetLabel(locale.T(MsgPrefDlgRsyncTransferSpecialFilesCaption, nil))
+	cbTransferSpecialFiles.SetTooltipText(locale.T(MsgPrefDlgRsyncTransferSpecialFilesHint, nil))
+	cbTransferSpecialFiles.SetHAlign(gtk.ALIGN_START)
+	bh.Bind(CFG_RSYNC_TRANSFER_SPECIAL_FILES_INCONSISTENT, cbTransferSpecialFiles, "inconsistent", glib.SETTINGS_BIND_DEFAULT)
+	bh.Bind(CFG_RSYNC_TRANSFER_SPECIAL_FILES, cbTransferSpecialFiles, "active", glib.SETTINGS_BIND_DEFAULT)
+
+	cbTransferSpecialFilesHandlerEnabled := true
+	_, err = cbTransferSpecialFiles.Connect("clicked", func(checkBox *gtk.CheckButton) {
+		if cbTransferSpecialFilesHandlerEnabled {
+			if checkBox.GetInconsistent() {
+				checkBox.SetInconsistent(false)
+			} else if !checkBox.GetInconsistent() && checkBox.GetActive() {
+				checkBox.SetInconsistent(true)
+				cbTransferSpecialFilesHandlerEnabled = false
+				checkBox.SetActive(false)
+				cbTransferSpecialFilesHandlerEnabled = true
+			}
+		}
+	})
+	if err != nil {
+		return nil, err
+	}
+	grid3.Attach(cbTransferSpecialFiles, DesignSecondCol, row3, 1, 1)
+	row3++
 
 	// Extra options
 	expExtraOptions, err := gtk.ExpanderNew(locale.T(MsgPrefDlgExtraOptionsBoxCaption, nil))
@@ -411,9 +608,7 @@ func createBackupSourceBlock(profileID, sourceID string, gsSettings *glib.Settin
 	if err != nil {
 		return nil, err
 	}
-	SetAllMargins(box2, 9)
-	box2.SetMarginEnd(0)
-	box2.SetMarginStart(0)
+	SetMargins(box2, 0, 9, 0, 9)
 	expExtraOptions.Add(box2)
 
 	frame, err := gtk.FrameNew("")
@@ -426,7 +621,7 @@ func createBackupSourceBlock(profileID, sourceID string, gsSettings *glib.Settin
 	if err != nil {
 		return nil, err
 	}
-	SetAllMargins(box3, 18)
+	SetMargins(box3, 18, 9, 18, 9)
 	frame.Add(box3)
 
 	grid2, err := gtk.GridNew()
@@ -435,29 +630,14 @@ func createBackupSourceBlock(profileID, sourceID string, gsSettings *glib.Settin
 	grid2.SetHAlign(gtk.ALIGN_FILL)
 	box3.PackStart(grid2, true, true, 0)
 	row2 := 0
-	/*
-		// Authenticate user
-		lbl, err = setupLabelJustifyRight("Auth. user")
-		if err != nil {
-			return nil, err
-		}
-		lbl.SetUseMarkup(true)
-		grid2.Attach(lbl, 0, row2, 1, 1)
-		edAuthUser, err := gtk.EntryNew()
-		if err != nil {
-			return nil, err
-		}
-		edAuthUser.SetTooltipText("")
-		edAuthUser.SetHExpand(true)
-		grid2.Attach(edAuthUser, 1, row2, 1, 1)
-		row2++
-	*/
+
 	// Authenticate password
-	lbl, err = setupLabelJustifyRight(locale.T(MsgPrefDlgAuthPasswordCaption, nil))
+	markup = NewMarkup(MARKUP_WEIGHT_NORMAL, 0, 0,
+		locale.T(MsgPrefDlgAuthPasswordCaption, nil), "")
+	lbl, err = SetupLabelMarkupJustifyLeft(markup)
 	if err != nil {
 		return nil, err
 	}
-	lbl.SetUseMarkup(true)
 	grid2.Attach(lbl, 0, row2, 1, 1)
 	edAuthPasswd, err := gtk.EntryNew()
 	if err != nil {
@@ -469,12 +649,14 @@ func createBackupSourceBlock(profileID, sourceID string, gsSettings *glib.Settin
 	edAuthPasswd.SetVisibility(false)
 	grid2.Attach(edAuthPasswd, 1, row2, 1, 1)
 	row2++
+
 	// Change file permission
-	lbl, err = setupLabelJustifyRight(locale.T(MsgPrefDlgChangeFilePermissionCaption, nil))
+	markup = NewMarkup(MARKUP_WEIGHT_NORMAL, 0, 0,
+		locale.T(MsgPrefDlgChangeFilePermissionCaption, nil), "")
+	lbl, err = SetupLabelMarkupJustifyLeft(markup)
 	if err != nil {
 		return nil, err
 	}
-	lbl.SetUseMarkup(true)
 	grid2.Attach(lbl, 0, row2, 1, 1)
 	edChmod, err := gtk.EntryNew()
 	if err != nil {
@@ -486,11 +668,12 @@ func createBackupSourceBlock(profileID, sourceID string, gsSettings *glib.Settin
 	row2++
 
 	// Enable/disable backup block
-	lbl, err = setupLabelJustifyRight(locale.T(MsgPrefDlgEnableBackupBlockCaption, nil))
+	markup = NewMarkup(MARKUP_WEIGHT_NORMAL, 0, 0,
+		locale.T(MsgPrefDlgEnableBackupBlockCaption, nil), "")
+	lbl, err = SetupLabelMarkupJustifyLeft(markup)
 	if err != nil {
 		return nil, err
 	}
-	lbl.SetUseMarkup(true)
 	grid.Attach(lbl, 0, row, 1, 1)
 	swEnabled, err := gtk.SwitchNew()
 	if err != nil {
@@ -501,30 +684,47 @@ func createBackupSourceBlock(profileID, sourceID string, gsSettings *glib.Settin
 	grid.Attach(swEnabled, 1, row, 1, 1)
 	row++
 
-	rsyncPathGroupIndex := validator.AddEntry(rsyncPathGroupName,
-		// 1st stage.
-		// Initialize data validation.
-		// Synchronized call: can update GTK widgets from here.
+	// UIValidator object is used here to simplify and standardize communication
+	// between UI and long running asynchronous processes. For instance, UIValidator
+	// helps to run in background RSYNC, which may go on for minutes (in case of
+	// network troubles), to verify that data source URL is valid.
+	rsyncPathValidatorGroup := "RsyncPath"
+	rsyncPathValidatorIndex := spew.Sprintf("%s_%s", profileID, sourceID)
+	rsyncPathValidateIndex := validator.AddEntry(rsyncPathValidatorGroup, rsyncPathValidatorIndex,
+		// 1st stage of UIValidator. Perform data initialization here, which will be used in next steps.
+		// Synchronized call: can update GTK+ widgets from here.
 		func(data *ValidatorData, group []*ValidatorData) error {
 			entry, ok := data.Items[0].(*gtk.Entry)
 			if !ok {
 				return validatorConversionError("ValidatorData.Items[0]", "*gtk.Entry")
 			}
-			// entry.SetIconFromIconName(gtk.ENTRY_ICON_SECONDARY, STOCK_SYNCHRONIZING_ICON)
-			err := SetEntryIconWithAssetImage(entry, gtk.ENTRY_ICON_SECONDARY, ASSET_SYNCHRONIZING_ICON)
-			if err != nil {
-				return err
+			swtch, ok := data.Items[1].(*gtk.Switch)
+			if !ok {
+				return validatorConversionError("ValidatorData.Items[1]", "*gtk.Switch")
 			}
-			RsyncSourcePathDescription := locale.T(MsgPrefDlgSourceRsyncPathDescriptionHint, nil)
-			markup := markupTooltip(NewMarkup(0, MARKUP_COLOR_SKY_BLUE, 0,
-				locale.T(MsgPrefDlgSourceRsyncValidatingHint, nil), nil), RsyncSourcePathDescription)
-			entry.SetTooltipMarkup(markup.String())
+			row, ok := data.Items[2].(*PreferenceRow)
+			if !ok {
+				return validatorConversionError("ValidatorData.Items[2]", "*PreferenceRow")
+			}
+			if swtch.GetActive() {
+				RemoveStyleClassesAll(&entry.Widget)
+				entry.SetIconFromIconName(gtk.ENTRY_ICON_SECONDARY, STOCK_SYNCHRONIZING_ICON)
+				AddStyleClass(&entry.Widget, "entry-image-right-spin")
+				err = row.AddStatus(entry.Native(), ProfileStatusValidating, "")
+				if err != nil {
+					return err
+				}
+				RsyncSourcePathDescription := locale.T(MsgPrefDlgSourceRsyncPathDescriptionHint, nil)
+				markup := markupTooltip(NewMarkup(0, MARKUP_COLOR_SKY_BLUE, 0,
+					locale.T(MsgPrefDlgSourceRsyncValidatingHint, nil), nil), RsyncSourcePathDescription)
+				entry.SetTooltipMarkup(markup.String())
+			}
 			return nil
 		},
-		// 2nd stage.
-		// Execute validation.
-		// Asynchronous call: doesn't allowed to change GTK widgets from here (only read)!
-		func(ctx context.Context, data *ValidatorData, group []*ValidatorData) ([]interface{}, error) {
+		// 2nd stage of UIValidator. Execute long-running validation processes here.
+		// Asynchronous call: doesn't allowed to change GTK+ widgets from here (only read)!
+		// Use groupLock object, to limit simultaneous access to some not-thread-safe resources.
+		func(groupLock *sync.Mutex, ctx context.Context, data *ValidatorData, group []*ValidatorData) ([]interface{}, error) {
 			entry, ok := data.Items[0].(*gtk.Entry)
 			if !ok {
 				return nil, validatorConversionError("ValidatorData.Items[0]", "*gtk.Entry")
@@ -544,32 +744,41 @@ func createBackupSourceBlock(profileID, sourceID string, gsSettings *glib.Settin
 				lg.Debugf("Validate rsync source: %q", rsyncURL)
 
 				if rsyncURL == "" {
+					groupLock.Lock()
 					msg := locale.T(MsgPrefDlgSourceRsyncPathEmptyError, nil)
+					groupLock.Unlock()
 					warning = &msg
 				} else {
 					lg.Debugf("Start rsync utility to validate rsync source")
-					sourceSettings, err := getBackupSourceSettings(profileID, sourceID, profileChanged)
+					//					sourceSettings, err := getBackupSourceSettings(profileID, sourceID, nil)
 					var authPass *string
-					ap := sourceSettings.GetString(CFG_MODULE_AUTH_PASSWORD)
+					ap := sourceSettings.settings.GetString(CFG_MODULE_AUTH_PASSWORD)
 					if ap != "" {
 						authPass = &ap
 					}
+
+					// Start long-running process, where RSYNC is running to validate source path.
+					// It can takes minutes.
 					err = rsync.GetPathStatus(ctx, authPass, rsyncURL, false)
+					// Lock global groupID context to skip race conditions.
+					groupLock.Lock()
 					if err != nil {
 						lg.Debug(err)
-						if !rsync.IsRsyncProcessTerminatedError(err) {
+						if !rsync.IsProcessTerminatedError(err) {
 							msg := err.Error()
 							warning = &msg
 						}
 					}
+					groupLock.Unlock()
 				}
 			}
 			return []interface{}{warning}, nil
 		},
-		// 3rd stage.
-		// Finalize data validation.
-		// Synchronized call: can update GTK widgets from here.
-		func(data *ValidatorData, results []interface{}) error {
+		// 3rd stage of UIValidator. Final step of data validation.
+		// Asynchronous call: can't update GTK+ widgets directly, but only when code is wrapped
+		// to glib.IdleAdd method.
+		// Use groupLock object, to limit simultaneous access to some not-thread-safe resources.
+		func(groupLock *sync.Mutex, data *ValidatorData, results []interface{}) error {
 			entry, ok := data.Items[0].(*gtk.Entry)
 			if !ok {
 				return validatorConversionError("ValidatorData.Items[0]", "*gtk.Entry")
@@ -582,62 +791,56 @@ func createBackupSourceBlock(profileID, sourceID string, gsSettings *glib.Settin
 			if !ok {
 				return validatorConversionError("ValidatorData.Items[2]", "*PreferenceRow")
 			}
+			groupLock.Lock()
 			RsyncSourcePathDescription := locale.T(MsgPrefDlgSourceRsyncPathDescriptionHint, nil)
-			if swtch.GetActive() {
-				warning, ok := results[0].(*string)
-				if !ok {
-					return validatorConversionError("interface{}[0]", "*string")
-				}
-				if warning != nil {
-					err := SetEntryIconWithAssetImage(entry, gtk.ENTRY_ICON_SECONDARY, ASSET_IMPORTANT_ICON)
-					if err != nil {
-						return err
+			groupLock.Unlock()
+			MustIdleAdd(func() {
+
+				if swtch.GetActive() {
+					RemoveStyleClass(&entry.Widget, "entry-image-right-spin")
+					warning, ok := results[0].(*string)
+					if !ok {
+						lg.Fatal(validatorConversionError("interface{}[0]", "*string"))
 					}
-					markup := markupTooltip(NewMarkup(MARKUP_WEIGHT_BOLD, MARKUP_COLOR_ORANGE_RED, 0, *warning, nil),
-						RsyncSourcePathDescription)
-					entry.SetTooltipMarkup(markup.String())
-					//entry.SetTooltipText(spew.Sprintf("Error: %s", *warning))
-					err = row.AddErrorStatus(entry.Native(), *warning)
-					if err != nil {
-						return err
+					if warning != nil {
+						AddStyleClasses(&entry.Widget, []string{"entry-image-right-error", "entry-image-right-shake"})
+						entry.SetIconFromIconName(gtk.ENTRY_ICON_SECONDARY, STOCK_IMPORTANT_ICON)
+						markup := markupTooltip(NewMarkup(MARKUP_WEIGHT_BOLD, MARKUP_COLOR_ORANGE_RED, 0, *warning, nil),
+							RsyncSourcePathDescription)
+						entry.SetTooltipMarkup(markup.String())
+						err = row.AddStatus(entry.Native(), ProfileStatusError, *warning)
+						if err != nil {
+							lg.Fatal(err)
+						}
+					} else {
+						entry.SetIconFromIconName(gtk.ENTRY_ICON_SECONDARY, STOCK_OK_ICON)
+						entry.SetTooltipText(RsyncSourcePathDescription)
+						err := row.RemoveStatus(entry.Native())
+						if err != nil {
+							lg.Fatal(err)
+						}
 					}
 				} else {
-					entry.SetIconFromIconName(gtk.ENTRY_ICON_SECONDARY, STOCK_OK_ICON)
-					entry.SetTooltipText(RsyncSourcePathDescription)
-					//fgColor := "Cyan"
-					//fntWeight := "bold"
-					//markup := markupTooltip("Verified", &fgColor, &fntWeight, RsyncSourcePathDescription)
-					//entry.SetTooltipMarkup(markup)
-					entry.SetTooltipText(RsyncSourcePathDescription)
-					//					entry.SetIconTooltipText(gtk.ENTRY_ICON_SECONDARY, "Press to validate rsync source")
-					err := row.AddErrorStatus(entry.Native(), "")
+					entry.SetIconFromIconName(gtk.ENTRY_ICON_SECONDARY, "")
+					markup := markupTooltip(NewMarkup(0, 0 /*MARKUP_COLOR_LIGHT_GRAY*/, 0,
+						locale.T(MsgPrefDlgSourceRsyncPathNotValidatedHint, nil), nil), RsyncSourcePathDescription)
+					entry.SetTooltipMarkup(markup.String())
+					err := row.RemoveStatus(entry.Native())
 					if err != nil {
-						return err
+						lg.Fatal(err)
 					}
 				}
-			} else {
-				entry.SetIconFromIconName(gtk.ENTRY_ICON_SECONDARY, "")
-				markup := markupTooltip(NewMarkup(0, 0 /*MARKUP_COLOR_LIGHT_GRAY*/, 0,
-					locale.T(MsgPrefDlgSourceRsyncPathNotValidatedHint, nil), nil), RsyncSourcePathDescription)
-				entry.SetTooltipMarkup(markup.String())
-				err := row.AddErrorStatus(entry.Native(), "")
-				if err != nil {
-					return err
-				}
-			}
+			})
 			return nil
 		}, edRsyncPath, swEnabled, prefRow)
 
 	rsyncPathTimer := time.AfterFunc(time.Millisecond*1000, func() {
-		_, err := glib.IdleAdd(func() {
-			err := validator.Validate(rsyncPathGroupName)
+		MustIdleAdd(func() {
+			err := validator.Validate(rsyncPathValidatorGroup, rsyncPathValidatorIndex)
 			if err != nil {
 				lg.Fatal(err)
 			}
 		})
-		if err != nil {
-			lg.Fatal(err)
-		}
 	})
 	rsyncPathTimer.Stop()
 	_, err = edRsyncPath.Connect("changed", func(v *gtk.Entry) {
@@ -654,11 +857,11 @@ func createBackupSourceBlock(profileID, sourceID string, gsSettings *glib.Settin
 	}
 	_, err = edRsyncPath.Connect("destroy", func(entry *gtk.Entry) {
 		lg.Debug("Destroy edRsyncPath")
-		err := prefRow.RemoveErrorStatus(entry.Native())
+		err := prefRow.RemoveStatus(entry.Native())
 		if err != nil {
 			lg.Fatal(err)
 		}
-		validator.RemoveEntry(rsyncPathGroupIndex)
+		validator.RemoveEntry(rsyncPathValidateIndex)
 	})
 	if err != nil {
 		return nil, err
@@ -678,10 +881,16 @@ func createBackupSourceBlock(profileID, sourceID string, gsSettings *glib.Settin
 	if err != nil {
 		return nil, err
 	}
-	destSubPathGroupIndex := validator.AddEntry(destSubPathGroupName,
-		// 1st stage.
-		// Initialize data validation.
-		// Synchronized call: can update GTK widgets from here.
+
+	// UIValidator object is used here to simplify and standardize communication
+	// between UI and long running asynchronous processes. For instance, UIValidator
+	// helps to run in background RSYNC, which may go on for minutes (in case of
+	// network troubles), to verify that data source URL is valid.
+	destSubPathValidatorGroup := "DestSubpath"
+	destSubPathValidatorIndex := profileID
+	destSubPathValidateIndex := validator.AddEntry(destSubPathValidatorGroup, destSubPathValidatorIndex,
+		// 1st stage of UIValidator. Perform data initialization here, which will be used in next steps.
+		// Synchronized call: can update GTK+ widgets from here.
 		func(data *ValidatorData, group []*ValidatorData) error {
 			entry, ok := data.Items[0].(*gtk.Entry)
 			if !ok {
@@ -692,18 +901,16 @@ func createBackupSourceBlock(profileID, sourceID string, gsSettings *glib.Settin
 				return validatorConversionError("ValidatorData.Items[1]", "*gtk.Switch")
 			}
 			if swtch.GetActive() {
-				// entry.SetIconFromIconName(gtk.ENTRY_ICON_SECONDARY, STOCK_SYNCHRONIZING_ICON)
-				SetEntryIconWithAssetImage(entry, gtk.ENTRY_ICON_SECONDARY, ASSET_SYNCHRONIZING_ICON)
-				if err != nil {
-					return err
-				}
+				RemoveStyleClassesAll(&entry.Widget)
+				entry.SetIconFromIconName(gtk.ENTRY_ICON_SECONDARY, STOCK_SYNCHRONIZING_ICON)
+				AddStyleClass(&entry.Widget, "entry-image-right-spin")
 			}
 			return nil
 		},
-		// 2nd stage.
-		// Execute validation.
-		// Asynchronous call: doesn't allowed to change GTK widgets from here (only read)!
-		func(ctx context.Context, data *ValidatorData, group []*ValidatorData) ([]interface{}, error) {
+		// 2nd stage of UIValidator. Execute long-running validation processes here.
+		// Asynchronous call: doesn't allowed to change GTK+ widgets from here (only read)!
+		// Use groupLock object, to limit simultaneous access to some not-thread-safe resources.
+		func(groupLock *sync.Mutex, ctx context.Context, data *ValidatorData, group []*ValidatorData) ([]interface{}, error) {
 			entry, ok := data.Items[0].(*gtk.Entry)
 			if !ok {
 				return nil, validatorConversionError("ValidatorData.Items[0]", "*gtk.Entry")
@@ -718,7 +925,9 @@ func createBackupSourceBlock(profileID, sourceID string, gsSettings *glib.Settin
 			}
 			var warning *string
 			if swtch.GetActive() && !rexp.MatchString(destSubPath) {
+				groupLock.Lock()
 				msg := locale.T(MsgPrefDlgDestinationSubpathExpressionError, nil)
+				groupLock.Unlock()
 				warning = &msg
 			} else {
 				foundCollision := false
@@ -744,17 +953,22 @@ func createBackupSourceBlock(profileID, sourceID string, gsSettings *glib.Settin
 				}
 				lg.Debugf("DestSubPath collision found = %v", foundCollision)
 				if foundCollision {
+					groupLock.Lock()
 					msg := locale.T(MsgPrefDlgDestinationSubpathNotUniqueError, nil)
+					groupLock.Unlock()
 					warning = &msg
 				}
 			}
 			return []interface{}{warning}, nil
 		},
-		// 3rd stage.
-		// Finalize data validation.
-		// Synchronized call: can update GTK widgets from here.
-		func(data *ValidatorData, results []interface{}) error {
-			var DestSubpathHint = locale.T(MsgPrefDlgDestinationSubpathHint, nil)
+		// 3rd stage of UIValidator. Final step of data validation.
+		// Asynchronous call: can't update GTK+ widgets directly, but only when code is wrapped
+		// to glib.IdleAdd method.
+		// Use groupLock object, to limit simultaneous access to some not-thread-safe resources.
+		func(groupLock *sync.Mutex, data *ValidatorData, results []interface{}) error {
+			groupLock.Lock()
+			destSubpathHint := locale.T(MsgPrefDlgDestinationSubpathHint, nil)
+			groupLock.Unlock()
 
 			entry, ok := data.Items[0].(*gtk.Entry)
 			if !ok {
@@ -768,59 +982,53 @@ func createBackupSourceBlock(profileID, sourceID string, gsSettings *glib.Settin
 			if !ok {
 				return validatorConversionError("ValidatorData.Items[2]", "*PreferenceRow")
 			}
-			if swtch.GetActive() {
-				warning, ok := results[0].(*string)
-				if !ok {
-					return validatorConversionError("interface{}[0]", "*string")
-				}
-				if warning != nil {
-					err := SetEntryIconWithAssetImage(entry, gtk.ENTRY_ICON_SECONDARY, ASSET_IMPORTANT_ICON)
-					if err != nil {
-						return err
+			MustIdleAdd(func() {
+
+				if swtch.GetActive() {
+					RemoveStyleClass(&entry.Widget, "entry-image-right-spin")
+					warning, ok := results[0].(*string)
+					if !ok {
+						lg.Fatal(validatorConversionError("interface{}[0]", "*string"))
 					}
-					markup := markupTooltip(NewMarkup(MARKUP_WEIGHT_BOLD, MARKUP_COLOR_ORANGE_RED, 0, *warning, nil),
-						DestSubpathHint)
-					entry.SetTooltipMarkup(markup.String())
-					//entry.SetTooltipText(*warning)
-					err = row.AddErrorStatus(entry.Native(), *warning)
-					if err != nil {
-						return err
+					if warning != nil {
+						AddStyleClasses(&entry.Widget, []string{"entry-image-right-error", "entry-image-right-shake"})
+						entry.SetIconFromIconName(gtk.ENTRY_ICON_SECONDARY, STOCK_IMPORTANT_ICON)
+						markup := markupTooltip(NewMarkup(MARKUP_WEIGHT_BOLD, MARKUP_COLOR_ORANGE_RED, 0, *warning, nil),
+							destSubpathHint)
+						entry.SetTooltipMarkup(markup.String())
+						//entry.SetTooltipText(*warning)
+						err = row.AddStatus(entry.Native(), ProfileStatusError, *warning)
+						if err != nil {
+							lg.Fatal(err)
+						}
+					} else {
+						entry.SetIconFromIconName(gtk.ENTRY_ICON_SECONDARY, STOCK_OK_ICON)
+						entry.SetTooltipText(destSubpathHint)
+						err = row.RemoveStatus(entry.Native())
+						if err != nil {
+							lg.Fatal(err)
+						}
 					}
 				} else {
-					entry.SetIconFromIconName(gtk.ENTRY_ICON_SECONDARY, STOCK_OK_ICON)
-					//fgcolor := "Royal Blue"
-					//fgColor := "Cyan"
-					//fntWeight := "bold"
-					//markup := markupTooltip("Verified", &fgColor, &fntWeight, DestSubpathHint)
-					//entry.SetTooltipMarkup(markup)
-					entry.SetTooltipText(DestSubpathHint)
-					err = row.AddErrorStatus(entry.Native(), "")
+					entry.SetIconFromIconName(gtk.ENTRY_ICON_SECONDARY, "")
+					markup := markupTooltip(NewMarkup(0, 0 /*MARKUP_COLOR_LIGHT_GRAY*/, 0,
+						locale.T(MsgPrefDlgDestinationSubpathNotValidatedHint, nil), nil), destSubpathHint)
+					entry.SetTooltipMarkup(markup.String())
+					err := row.RemoveStatus(entry.Native())
 					if err != nil {
-						return err
+						lg.Fatal(err)
 					}
 				}
-			} else {
-				entry.SetIconFromIconName(gtk.ENTRY_ICON_SECONDARY, "")
-				markup := markupTooltip(NewMarkup(0, 0 /*MARKUP_COLOR_LIGHT_GRAY*/, 0,
-					locale.T(MsgPrefDlgDestinationSubpathNotValidatedHint, nil), nil), DestSubpathHint)
-				entry.SetTooltipMarkup(markup.String())
-				err := row.AddErrorStatus(entry.Native(), "")
-				if err != nil {
-					lg.Fatal(err)
-				}
-			}
+			})
 			return nil
 		}, edDestSubpath, swEnabled, prefRow)
 	destSubpathTimer := time.AfterFunc(time.Millisecond*500, func() {
-		_, err := glib.IdleAdd(func() {
-			err := validator.Validate(destSubPathGroupName)
+		MustIdleAdd(func() {
+			err := validator.Validate(destSubPathValidatorGroup, destSubPathValidatorIndex)
 			if err != nil {
 				lg.Fatal(err)
 			}
 		})
-		if err != nil {
-			lg.Fatal(err)
-		}
 	})
 	destSubpathTimer.Stop()
 	_, err = edDestSubpath.Connect("changed", func(v *gtk.Entry) {
@@ -831,11 +1039,11 @@ func createBackupSourceBlock(profileID, sourceID string, gsSettings *glib.Settin
 	}
 	_, err = edDestSubpath.Connect("destroy", func(entry *gtk.Entry) {
 		lg.Debug("Destroy edDestSubpath")
-		err := prefRow.RemoveErrorStatus(entry.Native())
+		err := prefRow.RemoveStatus(entry.Native())
 		if err != nil {
 			lg.Fatal(err)
 		}
-		validator.RemoveEntry(destSubPathGroupIndex)
+		validator.RemoveEntry(destSubPathValidateIndex)
 		RestartTimer(destSubpathTimer, 50)
 	})
 	if err != nil {
@@ -856,13 +1064,19 @@ func createBackupSourceBlock(profileID, sourceID string, gsSettings *glib.Settin
 	bh.Bind(CFG_MODULE_CHANGE_FILE_PERMISSION, edChmod, "text", glib.SETTINGS_BIND_DEFAULT)
 	bh.Bind(CFG_MODULE_AUTH_PASSWORD, edAuthPasswd, "text", glib.SETTINGS_BIND_DEFAULT)
 
-	sourceSettings, err := getBackupSourceSettings(profileID, sourceID, profileChanged)
-	if err != nil {
-		return nil, err
-	}
-	ap := sourceSettings.GetString(CFG_MODULE_AUTH_PASSWORD)
-	cfp := sourceSettings.GetString(CFG_MODULE_CHANGE_FILE_PERMISSION)
-	expExtraOptions.SetExpanded(ap != "" || cfp != "")
+	// Expand control's block if found that internal settings not in default state.
+	expOverrideRsyncTransferOptions.SetExpanded(
+		!sourceSettings.settings.GetBoolean(CFG_RSYNC_TRANSFER_SOURCE_OWNER_INCONSISTENT) ||
+			!sourceSettings.settings.GetBoolean(CFG_RSYNC_TRANSFER_SOURCE_GROUP_INCONSISTENT) ||
+			!sourceSettings.settings.GetBoolean(CFG_RSYNC_TRANSFER_SOURCE_PERMISSIONS_INCONSISTENT) ||
+			!sourceSettings.settings.GetBoolean(CFG_RSYNC_RECREATE_SYMLINKS_INCONSISTENT) ||
+			!sourceSettings.settings.GetBoolean(CFG_RSYNC_TRANSFER_DEVICE_FILES_INCONSISTENT) ||
+			!sourceSettings.settings.GetBoolean(CFG_RSYNC_TRANSFER_SPECIAL_FILES_INCONSISTENT))
+
+	// Expand control's block if found that internal settings not in default state.
+	expExtraOptions.SetExpanded(
+		sourceSettings.settings.GetString(CFG_MODULE_AUTH_PASSWORD) != "" ||
+			sourceSettings.settings.GetString(CFG_MODULE_CHANGE_FILE_PERMISSION) != "")
 
 	_, err = swEnabled.Connect("state-set", func(v *gtk.Switch) {
 		RestartTimer(rsyncPathTimer, 50)
@@ -892,57 +1106,37 @@ func createBackupSourceBlock(profileID, sourceID string, gsSettings *glib.Settin
 	return box, nil
 }
 
-// getBackupSettings create GlibSettings object with change event
+// getProfileSettings create GlibSettings object with change event
 // connected to specific indexed profile[profileID].
-func getBackupSettings(profileID string, profileChanged *bool) (*glib.Settings, error) {
-	path := fmt.Sprintf(core.SETTINGS_PROFILE_PATH, profileID)
-	gs, err := glib.SettingsNewWithPath(core.SETTINGS_PROFILE_ID, path)
+func getProfileSettings(appStore *SettingsStore, profileID string, changed func()) (*SettingsStore, error) {
+	pathSuffix := fmt.Sprintf(PROFILE_SCHEMA_SUFFIX_PATH, profileID)
+	store, err := appStore.GetChildSettingsStore(PROFILE_SCHEMA_SUFFIX_ID, pathSuffix, changed)
 	if err != nil {
 		return nil, err
 	}
-	_, err = gs.Connect("changed", func() {
-		if profileChanged != nil {
-			*profileChanged = true
-		}
-	})
-	if err != nil {
-		return nil, err
-	}
-	return gs, nil
+	return store, nil
 }
 
 // getBackupSourceSettings create GlibSettings object with change event
 // connected to specific indexed source[profile[profileID], sourceID].
-func getBackupSourceSettings(profileID, sourceID string, profileChanged *bool) (*glib.Settings, error) {
-	path := fmt.Sprintf(core.SETTINGS_SOURCE_PATH, profileID, sourceID)
-	gs, err := glib.SettingsNewWithPath(core.SETTINGS_SOURCE_ID, path)
+func getBackupSourceSettings(profileStore *SettingsStore, sourceID string, changed func()) (*SettingsStore, error) {
+	path := fmt.Sprintf(SOURCE_SCHEMA_SUFFIX_PATH, sourceID)
+	store, err := profileStore.GetChildSettingsStore(SOURCE_SCHEMA_SUFFIX_ID, path, changed)
 	if err != nil {
 		return nil, err
 	}
-	_, err = gs.Connect("changed", func() {
-		if profileChanged != nil {
-			*profileChanged = true
-		}
-	})
-	if err != nil {
-		return nil, err
-	}
-	return gs, nil
+	return store, nil
 }
 
-func createBackupSourceBlock2(profileID, sourceID string, prefRow *PreferenceRow,
-	validator *UIValidator, profileChanged *bool) (*gtk.Container, error) {
+func createBackupSourceBlock2(win *gtk.ApplicationWindow, first bool, profileSettings *SettingsStore, profileID, sourceID string,
+	prefRow *PreferenceRow, validator *UIValidator, profileChanged func()) (*gtk.Container, error) {
 
-	backupSettings, err := getBackupSettings(profileID, profileChanged)
-	if err != nil {
-		return nil, err
-	}
-	sourceSettings, err := getBackupSourceSettings(profileID, sourceID, profileChanged)
+	sourceSettings, err := getBackupSourceSettings(profileSettings, sourceID, profileChanged)
 	if err != nil {
 		lg.Fatal(err)
 	}
 
-	box2, err := createBackupSourceBlock(profileID, sourceID, sourceSettings, prefRow, validator, profileChanged)
+	box2, err := createBackupSourceBlock(profileID, sourceID, sourceSettings, prefRow, validator /*, profileChanged*/)
 	if err != nil {
 		return nil, err
 	}
@@ -957,49 +1151,60 @@ func createBackupSourceBlock2(profileID, sourceID string, prefRow *PreferenceRow
 	}
 	box3.Add(box2)
 	box.Add(box3)
-	btnDeleteSource, err := gtk.ButtonNew()
-	if err != nil {
-		return nil, err
-	}
-	lbl, err := gtk.LabelNew(locale.T(MsgPrefDlgDeleteBackupBlockCaption, nil))
-	if err != nil {
-		return nil, err
-	}
-	btnDeleteSource.Add(lbl)
-	btnDeleteSource.SetVAlign(gtk.ALIGN_CENTER)
-	btnDeleteSource.SetTooltipText(locale.T(MsgPrefDlgDeleteBackupBlockHint, nil))
-	_, err = btnDeleteSource.Connect("clicked", func(btn *gtk.Button, box *gtk.Box) {
-		box.Destroy()
 
-		sarr := NewSettingsArray(backupSettings, CFG_SOURCE_LIST)
-		err = sarr.DeleteNode(sourceSettings, sourceID)
+	srclbr, err := gtk.ListBoxRowNew()
+	if err != nil {
+		return nil, err
+	}
+	SetMargins(&srclbr.Widget, 5, 5, 5, 5)
+	srclbr.Add(box)
+
+	btnDeleteSource, err := SetupButtonWithThemedImage(STOCK_DELETE_ICON)
+	if err != nil {
+		return nil, err
+	}
+	btnDeleteSource.SetVAlign(gtk.ALIGN_START)
+	btnDeleteSource.SetSensitive(!first)
+	btnDeleteSource.SetTooltipText(locale.T(MsgPrefDlgDeleteBackupBlockHint, nil))
+	_, err = btnDeleteSource.Connect("clicked", func(btn *gtk.Button, box *gtk.ListBoxRow) {
+		title := locale.T(MsgPrefDlgDeleteBackupBlockDialogTitle, nil)
+		titleMarkup := NewMarkup(MARKUP_SIZE_LARGER, 0, 0, nil, nil,
+			NewMarkup(MARKUP_SIZE_LARGER, 0, 0, title, nil))
+		yesButtonCaption := locale.T(MsgDialogYesButton, nil)
+		yesButtonMarkup := NewMarkup(MARKUP_SIZE_LARGER, 0, 0, removeUndescore(yesButtonCaption), nil)
+		textMarkup := locale.T(MsgPrefDlgDeleteBackupBlockDialogText,
+			struct{ YesButton string }{YesButton: yesButtonMarkup.String()})
+		responseYes, err := questionDialog(&win.Window, titleMarkup.String(), textMarkup, true, true, false)
 		if err != nil {
 			lg.Fatal(err)
 		}
-	}, box)
+
+		if responseYes {
+			box.Destroy()
+
+			sarr := profileSettings.NewSettingsArray(CFG_SOURCE_LIST)
+			err = sarr.DeleteNode(sourceSettings, sourceID)
+			if err != nil {
+				lg.Fatal(err)
+			}
+		}
+	}, srclbr)
 	if err != nil {
 		return nil, err
 	}
-	//	if sourceID == "0" {
-	//		btnDeleteSource.SetSensitive(false)
-	//	}
 	box3.PackStart(btnDeleteSource, false, false, 0)
+
 	box3.SetHExpand(true)
 	box3.SetVExpand(false)
-	sep, err := gtk.SeparatorNew(gtk.ORIENTATION_HORIZONTAL)
-	if err != nil {
-		return nil, err
-	}
-	box.Add(sep)
 
-	return &box.Container, nil
+	return &srclbr.Container, nil
 }
 
-// Create preference dialog with "Sources" page, where controls
+// ProfilePreferencesNew create preference dialog with "Sources" page, where controls
 // being bound to GLib Setting object to save/restore functionality.
-func BackupPreferencesNew(appSettings *glib.Settings, list *PreferenceRowList,
+func ProfilePreferencesNew(win *gtk.ApplicationWindow, appSettings *SettingsStore,
 	validator *UIValidator, profileID string, prefRow *PreferenceRow,
-	profileChanged *bool, initProfileName *string) (*gtk.Container, string, error) {
+	profileChanged func(), initProfileName *string) (*gtk.Container, string, error) {
 
 	sw, err := gtk.ScrolledWindowNew(nil, nil)
 	if err != nil {
@@ -1008,8 +1213,7 @@ func BackupPreferencesNew(appSettings *glib.Settings, list *PreferenceRowList,
 	sw.SetPolicy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
 	//SetScrolledWindowPropogatedHeight(sw, true)
 
-	//box, err := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 6)
-	frame, err := gtk.FrameNew(locale.T(MsgPrefDlgSourcesCaption, nil))
+	frame, err := gtk.FrameNew("")
 	if err != nil {
 		return nil, "", err
 	}
@@ -1018,60 +1222,44 @@ func BackupPreferencesNew(appSettings *glib.Settings, list *PreferenceRowList,
 	if err != nil {
 		return nil, "", err
 	}
-	SetAllMargins(box0, 18)
+	SetAllMargins(box0, 0)
 	frame.Add(box0)
 
-	box1, err := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 6)
+	srclb, err := gtk.ListBoxNew()
 	if err != nil {
 		return nil, "", err
 	}
-	box0.Add(box1)
+	srclb.SetSelectionMode(gtk.SELECTION_NONE)
+	srclb.SetHeaderFunc(func(row, before *gtk.ListBoxRow) {
+		if before != nil {
+			current := row.GetHeader()
+			if current == nil {
+				sep, err := gtk.SeparatorNew(gtk.ORIENTATION_HORIZONTAL)
+				if err != nil {
+					lg.Fatal(err)
+				}
+				row.SetHeader(&sep.Widget)
+			}
+		}
+	})
+	box0.Add(srclb)
 
-	backupSettings, err := getBackupSettings(profileID, profileChanged)
+	profileSettings, err := getProfileSettings(appSettings, profileID, profileChanged)
 	if err != nil {
 		return nil, "", err
 	}
 
-	sarr := NewSettingsArray(backupSettings, CFG_SOURCE_LIST)
-	for _, srcID := range sarr.GetArrayIDs() {
-		box2, err := createBackupSourceBlock2(profileID, srcID, prefRow, validator, profileChanged)
+	sarr := profileSettings.NewSettingsArray(CFG_SOURCE_LIST)
+
+	for i, srcID := range sarr.GetArrayIDs() {
+		cntr, err := createBackupSourceBlock2(win, i == 0, profileSettings, profileID,
+			srcID, prefRow, validator, profileChanged)
 		if err != nil {
 			return nil, "", err
 		}
-		box1.Add(box2)
+
+		srclb.Add(cntr)
 	}
-
-	btnAddSource, err := SetupButtonWithThemedImage("list-add-symbolic")
-	if err != nil {
-		return nil, "", err
-	}
-	btnAddSource.SetTooltipText(locale.T(MsgPrefDlgAddBackupBlockHint, nil))
-	_, err = btnAddSource.Connect("clicked", func() {
-		sarr := NewSettingsArray(backupSettings, CFG_SOURCE_LIST)
-		sourceID, err := sarr.AddNode()
-		if err != nil {
-			lg.Fatal(err)
-		}
-
-		box3, err := createBackupSourceBlock2(profileID, sourceID, prefRow, validator, profileChanged)
-		if err != nil {
-			lg.Fatal(err)
-		}
-
-		box1.Add(box3)
-		box1.ShowAll()
-
-		destSubPathGroupName := spew.Sprintf("DestSubpath_%v", profileID)
-		err = validator.Validate(destSubPathGroupName)
-		if err != nil {
-			lg.Fatal(err)
-		}
-	})
-	if err != nil {
-		return nil, "", err
-	}
-
-	box0.Add(btnAddSource)
 
 	grid, err := gtk.GridNew()
 	grid.SetColumnSpacing(12)
@@ -1081,11 +1269,13 @@ func BackupPreferencesNew(appSettings *glib.Settings, list *PreferenceRowList,
 
 	var lbl *gtk.Label
 
-	appBH := BindingHelperNew(appSettings)
-	backupBH := BindingHelperNew(backupSettings)
+	appBH := appSettings.NewBindingHelper()
+	profileBH := profileSettings.NewBindingHelper()
 
 	// Profile name
-	lbl, err = setupLabelJustifyRight(locale.T(MsgPrefDlgProfileNameCaption, nil))
+	markup := NewMarkup(MARKUP_WEIGHT_BOLD, 0, 0,
+		locale.T(MsgPrefDlgProfileNameCaption, nil), "")
+	lbl, err = SetupLabelMarkupJustifyLeft(markup)
 	if err != nil {
 		return nil, "", err
 	}
@@ -1094,20 +1284,33 @@ func BackupPreferencesNew(appSettings *glib.Settings, list *PreferenceRowList,
 	if err != nil {
 		return nil, "", err
 	}
-	//	edProfileName.SetTooltipText("Profile name")
 	edProfileName.SetHExpand(true)
 	edProfileName.SetHAlign(gtk.ALIGN_FILL)
-	profileGroupIndex := validator.AddEntry("ProfileName",
-		// 1st stage.
-		// Initialize data validation.
-		// Synchronized call: can update GTK widgets here.
+
+	// UIValidator object is used here to simplify and standardize communication
+	// between UI and long running asynchronous processes. For instance, UIValidator
+	// helps to run in background RSYNC, which may go on for minutes (in case of
+	// network troubles), to verify that data source URL is valid.
+	profileValidatorGroup := "ProfileName"
+	profileValidatorIndex := "1"
+	profileValidateIndex := validator.AddEntry(profileValidatorGroup, profileValidatorIndex,
+		// 1st stage of UIValidator. Perform data initialization here, which will be used in next steps.
+		// Synchronized call: can update GTK+ widgets here.
 		func(data *ValidatorData, group []*ValidatorData) error {
+			entry, ok := data.Items[0].(*gtk.Entry)
+			if !ok {
+				return validatorConversionError("ValidatorData.Items[0]", "*gtk.Entry")
+			}
+			RemoveStyleClassesAll(&entry.Widget)
+			entry.SetIconFromIconName(gtk.ENTRY_ICON_SECONDARY, STOCK_SYNCHRONIZING_ICON)
+			AddStyleClass(&entry.Widget, "entry-image-right-spin")
 			return nil
 		},
-		// 2nd stage.
-		// Execute validation.
-		// Asynchronous call: doesn't allowed to change GTK widgets here (only read)!
-		func(ctx context.Context, data *ValidatorData, group []*ValidatorData) ([]interface{}, error) {
+		// 2nd stage of UIValidator. Execute long-running validation processes here.
+		// Asynchronous call: doesn't allowed to change GTK+ widgets here (only read)!
+		// Use groupLock object, to limit simultaneous access to some not-thread-safe resources.
+		func(groupLock *sync.Mutex, ctx context.Context, data *ValidatorData, group []*ValidatorData) ([]interface{}, error) {
+
 			entry, ok := data.Items[0].(*gtk.Entry)
 			if !ok {
 				return nil, validatorConversionError("ValidatorData.Items[0]", "*gtk.Entry")
@@ -1118,7 +1321,9 @@ func BackupPreferencesNew(appSettings *glib.Settings, list *PreferenceRowList,
 			}
 			var warning *string
 			if profileName == "" {
+				groupLock.Lock()
 				msg := locale.T(MsgPrefDlgProfileNameEmptyWarning, nil)
+				groupLock.Unlock()
 				warning = &msg
 			} else {
 				foundCollision := false
@@ -1135,21 +1340,25 @@ func BackupPreferencesNew(appSettings *glib.Settings, list *PreferenceRowList,
 						foundCollision = true
 						break
 					}
-
 				}
 				if foundCollision {
+					groupLock.Lock()
 					msg := locale.T(MsgPrefDlgProfileNameExistsWarning,
 						struct{ ProfileName string }{ProfileName: profileName})
+					groupLock.Unlock()
 					warning = &msg
 				}
 			}
 			return []interface{}{warning}, nil
 		},
-		// 3rd stage.
-		// Finalize data validation.
-		// Synchronized call: can update GTK widgets here.
-		func(data *ValidatorData, results []interface{}) error {
-			var ProfileNameHint = locale.T(MsgPrefDlgProfileNameHint, nil)
+		// 3rd stage of UIValidator. Final step of data validation.
+		// Asynchronous call: can't update GTK+ widgets directly, but only when code is wrapped
+		// to glib.IdleAdd method.
+		// Use groupLock object, to limit simultaneous access to some not-thread-safe resources.
+		func(groupLock *sync.Mutex, data *ValidatorData, results []interface{}) error {
+			groupLock.Lock()
+			profileNameHint := locale.T(MsgPrefDlgProfileNameHint, nil)
+			groupLock.Unlock()
 			entry, ok := data.Items[0].(*gtk.Entry)
 			if !ok {
 				return validatorConversionError("ValidatorData.Items[0]", "*gtk.Entry")
@@ -1162,44 +1371,43 @@ func BackupPreferencesNew(appSettings *glib.Settings, list *PreferenceRowList,
 			if !ok {
 				return validatorConversionError("interface{}[0]", "*string")
 			}
-			if warning != nil {
-				err := SetEntryIconWithAssetImage(entry, gtk.ENTRY_ICON_SECONDARY, ASSET_IMPORTANT_ICON)
-				if err != nil {
-					return err
+
+			MustIdleAdd(func() {
+				if warning != nil {
+					AddStyleClasses(&entry.Widget, []string{"entry-image-right-error", "entry-image-right-shake"})
+					entry.SetIconFromIconName(gtk.ENTRY_ICON_SECONDARY, STOCK_IMPORTANT_ICON)
+					markup := markupTooltip(NewMarkup(MARKUP_WEIGHT_BOLD, MARKUP_COLOR_ORANGE_RED, 0, *warning, nil),
+						profileNameHint)
+					entry.SetTooltipMarkup(markup.String())
+					err = row.AddStatus(entry.Native(), ProfileStatusError, *warning)
+					if err != nil {
+						lg.Fatal(err)
+					}
+				} else {
+					entry.SetIconFromIconName(gtk.ENTRY_ICON_SECONDARY, "")
+					entry.SetTooltipText(profileNameHint)
+					err = row.RemoveStatus(entry.Native())
+					if err != nil {
+						lg.Fatal(err)
+					}
 				}
-				markup := markupTooltip(NewMarkup(MARKUP_WEIGHT_BOLD, MARKUP_COLOR_ORANGE_RED, 0, *warning, nil),
-					ProfileNameHint)
-				entry.SetTooltipMarkup(markup.String())
-				err = row.AddErrorStatus(entry.Native(), *warning)
-				if err != nil {
-					return err
-				}
-			} else {
-				entry.SetIconFromIconName(gtk.ENTRY_ICON_SECONDARY, "")
-				entry.SetTooltipText(ProfileNameHint)
-				err = row.RemoveErrorStatus(entry.Native())
-				if err != nil {
-					return err
-				}
-			}
+			})
+
 			return nil
 		}, edProfileName, prefRow)
-	backupBH.Bind(CFG_PROFILE_NAME, edProfileName, "text", glib.SETTINGS_BIND_DEFAULT)
+	profileBH.Bind(CFG_PROFILE_NAME, edProfileName, "text", glib.SETTINGS_BIND_DEFAULT)
 	timer := time.AfterFunc(time.Millisecond*500, func() {
-		_, err := glib.IdleAdd(func() {
+		MustIdleAdd(func() {
 			name, err := edProfileName.GetText()
 			if err != nil {
 				lg.Fatal(err)
 			}
 			prefRow.SetName(name)
-			err = validator.Validate("ProfileName")
+			err = validator.Validate(profileValidatorGroup, profileValidatorIndex)
 			if err != nil {
 				lg.Fatal(err)
 			}
 		})
-		if err != nil {
-			lg.Fatal(err)
-		}
 	})
 	_, err = edProfileName.Connect("changed", func(v *gtk.Entry, tmr *time.Timer) {
 		tmr.Stop()
@@ -1209,8 +1417,8 @@ func BackupPreferencesNew(appSettings *glib.Settings, list *PreferenceRowList,
 		return nil, "", err
 	}
 	_, err = edProfileName.Connect("destroy", func(entry *gtk.Entry) {
-		validator.RemoveEntry(profileGroupIndex)
-		err = validator.Validate("ProfileName")
+		validator.RemoveEntry(profileValidateIndex)
+		err = validator.Validate(profileValidatorGroup, profileValidatorIndex)
 		if err != nil {
 			lg.Fatal(err)
 		}
@@ -1227,27 +1435,29 @@ func BackupPreferencesNew(appSettings *glib.Settings, list *PreferenceRowList,
 	row++
 
 	// Destination root path
-	lbl, err = setupLabelJustifyRight(locale.T(MsgPrefDlgDefaultDestPathCaption, nil))
+	markup = NewMarkup(MARKUP_WEIGHT_BOLD, 0, 0,
+		locale.T(MsgPrefDlgDefaultDestPathCaption, nil), "")
+	lbl, err = SetupLabelMarkupJustifyLeft(markup)
 	if err != nil {
 		return nil, "", err
 	}
 	grid.Attach(lbl, 0, row, 1, 1)
-	destFolder, err := gtk.FileChooserButtonNew("Select default destination folder", gtk.FILE_CHOOSER_ACTION_SELECT_FOLDER)
+	destFolder, err := gtk.FileChooserButtonNew("Select default destination folder",
+		gtk.FILE_CHOOSER_ACTION_SELECT_FOLDER)
 	if err != nil {
 		return nil, "", err
 	}
 	destFolder.SetTooltipText(locale.T(MsgPrefDlgDefaultDestPathHint, nil))
 	destFolder.SetHExpand(true)
 	destFolder.SetHAlign(gtk.ALIGN_FILL)
-	folder := backupSettings.GetString(CFG_PROFILE_DEST_ROOT_PATH)
+	folder := profileSettings.settings.GetString(CFG_PROFILE_DEST_ROOT_PATH)
 	if _, err := os.Stat(folder); !os.IsNotExist(err) {
-		// lg.Println(spew.Sprintf("File %q found", filename))
 		destFolder.SetFilename(folder)
 	}
 	_, err = destFolder.Connect("file-set", func(fcb *gtk.FileChooserButton) {
 		folder := fcb.GetFilename()
 		if _, err := os.Stat(folder); !os.IsNotExist(err) {
-			backupSettings.SetString(CFG_PROFILE_DEST_ROOT_PATH, folder)
+			profileSettings.settings.SetString(CFG_PROFILE_DEST_ROOT_PATH, folder)
 		}
 	})
 	if err != nil {
@@ -1256,6 +1466,47 @@ func BackupPreferencesNew(appSettings *glib.Settings, list *PreferenceRowList,
 	grid.Attach(destFolder, 1, row, 1, 1)
 	row++
 
+	markup = NewMarkup(MARKUP_WEIGHT_BOLD, 0, 0,
+		locale.T(MsgPrefDlgSourcesCaption, nil), "")
+	lbl, err = SetupLabelMarkupJustifyLeft(markup)
+	if err != nil {
+		return nil, "", err
+	}
+	grid.Attach(lbl, 0, row, 1, 1)
+
+	btnAddSource, err := SetupButtonWithThemedImage("list-add-symbolic")
+	if err != nil {
+		return nil, "", err
+	}
+	btnAddSource.SetTooltipText(locale.T(MsgPrefDlgAddBackupBlockHint, nil))
+	_, err = btnAddSource.Connect("clicked", func() {
+		sarr := profileSettings.NewSettingsArray(CFG_SOURCE_LIST)
+		sourceID, err := sarr.AddNode()
+		if err != nil {
+			lg.Fatal(err)
+		}
+
+		cntr, err := createBackupSourceBlock2(win, false, profileSettings, profileID,
+			sourceID, prefRow, validator, profileChanged)
+		if err != nil {
+			lg.Fatal(err)
+		}
+
+		srclb.Add(cntr)
+
+		srclb.ShowAll()
+
+		destSubPathValidatorGroup := "DestSubpath"
+		destSubPathValidatorIndex := profileID
+		err = validator.Validate(destSubPathValidatorGroup, destSubPathValidatorIndex)
+		if err != nil {
+			lg.Fatal(err)
+		}
+	})
+	if err != nil {
+		return nil, "", err
+	}
+
 	box2, err := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 6)
 	if err != nil {
 		return nil, "", err
@@ -1263,6 +1514,7 @@ func BackupPreferencesNew(appSettings *glib.Settings, list *PreferenceRowList,
 	SetAllMargins(box2, 18)
 	box2.Add(grid)
 	box2.Add(frame)
+	box2.Add(btnAddSource)
 
 	vp, err := gtk.ViewportNew(nil, nil)
 	if err != nil {
@@ -1273,36 +1525,31 @@ func BackupPreferencesNew(appSettings *glib.Settings, list *PreferenceRowList,
 	sw.Add(vp)
 	_, err = sw.Connect("destroy", func(b gtk.IWidget) {
 		appBH.Unbind()
-		backupBH.Unbind()
+		profileBH.Unbind()
 	})
 	if err != nil {
 		return nil, "", err
 	}
 
-	/*
-		act, err := createAddNewBackupSourceAction(profileID, box, btnAddSource)
-		if err != nil {
-			return nil, nil, nil, err
-		}
-		actionMap.AddAction(act)
-	*/
-
-	name := backupSettings.GetString(CFG_PROFILE_NAME)
+	name := profileSettings.settings.GetString(CFG_PROFILE_NAME)
 	return &sw.Container, name, nil
 }
 
 // AdvancedPreferencesNew create preference dialog with "Advanced" page, where controls
 // bound to GLib Setting object for save/restore functionality.
-func AdvancedPreferencesNew(gsSettings *glib.Settings) (*gtk.Container, error) {
+func AdvancedPreferencesNew(appSettings *SettingsStore) (*gtk.Container, error) {
 	box, err := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 6)
 	if err != nil {
 		return nil, err
 	}
 	SetAllMargins(box, 18)
 
-	bh := BindingHelperNew(gsSettings)
+	bh := appSettings.NewBindingHelper()
 
 	grid, err := gtk.GridNew()
+	if err != nil {
+		return nil, err
+	}
 	grid.SetColumnSpacing(12)
 	grid.SetRowSpacing(6)
 	row := 0
@@ -1312,12 +1559,7 @@ func AdvancedPreferencesNew(gsSettings *glib.Settings) (*gtk.Container, error) {
 	// ---------------------------------------------------------
 	markup := NewMarkup(MARKUP_WEIGHT_BOLD, 0, 0,
 		locale.T(MsgPrefDlgAdvancedBackupSettingsSection, nil), "")
-	lbl, err := gtk.LabelNew(markup.String())
-	if err != nil {
-		return nil, err
-	}
-	lbl.SetUseMarkup(true)
-	lbl.SetHAlign(gtk.ALIGN_START)
+	lbl, err := SetupLabelMarkupJustifyLeft(markup)
 	if err != nil {
 		return nil, err
 	}
@@ -1325,7 +1567,7 @@ func AdvancedPreferencesNew(gsSettings *glib.Settings) (*gtk.Container, error) {
 	row++
 
 	// Enable/disable automatic backup block size
-	lbl, err = setupLabelJustifyRight(locale.T(MsgPrefDlgAutoManageBackupBlockSizeCaption, nil))
+	lbl, err = SetupLabelJustifyRight(locale.T(MsgPrefDlgAutoManageBackupBlockSizeCaption, nil))
 	if err != nil {
 		return nil, err
 	}
@@ -1352,7 +1594,7 @@ func AdvancedPreferencesNew(gsSettings *glib.Settings) (*gtk.Container, error) {
 	row++
 
 	// Backup block size
-	lbl, err = setupLabelJustifyRight(locale.T(MsgPrefDlgBackupBlockSizeCaption, nil))
+	lbl, err = SetupLabelJustifyRight(locale.T(MsgPrefDlgBackupBlockSizeCaption, nil))
 	if err != nil {
 		return nil, err
 	}
@@ -1372,7 +1614,7 @@ func AdvancedPreferencesNew(gsSettings *glib.Settings) (*gtk.Container, error) {
 	row++
 
 	// Run notification script on backup completion
-	lbl, err = setupLabelJustifyRight(locale.T(MsgPrefDlgRunNotificationScriptCaption, nil))
+	lbl, err = SetupLabelJustifyRight(locale.T(MsgPrefDlgRunNotificationScriptCaption, nil))
 	if err != nil {
 		return nil, err
 	}
@@ -1412,12 +1654,7 @@ func AdvancedPreferencesNew(gsSettings *glib.Settings) (*gtk.Container, error) {
 	// ---------------------------------------------------------
 	markup = NewMarkup(MARKUP_WEIGHT_BOLD, 0, 0,
 		locale.T(MsgPrefDlgAdvansedRsyncSettingsSection, nil), "")
-	lbl, err = gtk.LabelNew(markup.String())
-	if err != nil {
-		return nil, err
-	}
-	lbl.SetUseMarkup(true)
-	lbl.SetHAlign(gtk.ALIGN_START)
+	lbl, err = SetupLabelMarkupJustifyLeft(markup)
 	if err != nil {
 		return nil, err
 	}
@@ -1425,7 +1662,7 @@ func AdvancedPreferencesNew(gsSettings *glib.Settings) (*gtk.Container, error) {
 	row++
 
 	// Rsync utility retry count
-	lbl, err = setupLabelJustifyRight(locale.T(MsgPrefDlgRsyncRetryCountCaption, nil))
+	lbl, err = SetupLabelJustifyRight(locale.T(MsgPrefDlgRsyncRetryCountCaption, nil))
 	if err != nil {
 		return nil, err
 	}
@@ -1435,14 +1672,13 @@ func AdvancedPreferencesNew(gsSettings *glib.Settings) (*gtk.Container, error) {
 		return nil, err
 	}
 	sbRetryCount.SetTooltipText(locale.T(MsgPrefDlgRsyncRetryCountHint, nil))
-	//sbRetryCount.SetHExpand(false)
 	sbRetryCount.SetHAlign(gtk.ALIGN_START)
 	bh.Bind(CFG_RSYNC_RETRY_COUNT, sbRetryCount, "value", glib.SETTINGS_BIND_DEFAULT)
 	grid.Attach(sbRetryCount, DesignSecondCol, row, 1, 1)
 	row++
 
 	// Enable/disable RSYNC low level log
-	lbl, err = setupLabelJustifyRight(locale.T(MsgPrefDlgRsyncLowLevelLogCaption, nil))
+	lbl, err = SetupLabelJustifyRight(locale.T(MsgPrefDlgRsyncLowLevelLogCaption, nil))
 	if err != nil {
 		return nil, err
 	}
@@ -1469,7 +1705,7 @@ func AdvancedPreferencesNew(gsSettings *glib.Settings) (*gtk.Container, error) {
 	row++
 
 	// Enable/disable RSYNC intensive low level log
-	lbl, err = setupLabelJustifyRight(locale.T(MsgPrefDlgRsyncIntensiveLowLevelLogCaption, nil))
+	lbl, err = SetupLabelJustifyRight(locale.T(MsgPrefDlgRsyncIntensiveLowLevelLogCaption, nil))
 	if err != nil {
 		return nil, err
 	}
@@ -1492,8 +1728,10 @@ func AdvancedPreferencesNew(gsSettings *glib.Settings) (*gtk.Container, error) {
 	}
 	cbIntensiveLowLevelRsyncLog.SetTooltipText(locale.T(MsgPrefDlgRsyncIntensiveLowLevelLogHint, nil))
 	cbIntensiveLowLevelRsyncLog.SetHAlign(gtk.ALIGN_START)
-	bh.Bind(CFG_ENABLE_INTENSIVE_LOW_LEVEL_LOG_OF_RSYNC, cbIntensiveLowLevelRsyncLog, "active", glib.SETTINGS_BIND_DEFAULT)
-	bh.Bind(CFG_ENABLE_LOW_LEVEL_LOG_OF_RSYNC, cbIntensiveLowLevelRsyncLog, "sensitive", glib.SETTINGS_BIND_GET)
+	bh.Bind(CFG_ENABLE_INTENSIVE_LOW_LEVEL_LOG_OF_RSYNC, cbIntensiveLowLevelRsyncLog,
+		"active", glib.SETTINGS_BIND_DEFAULT)
+	bh.Bind(CFG_ENABLE_LOW_LEVEL_LOG_OF_RSYNC, cbIntensiveLowLevelRsyncLog,
+		"sensitive", glib.SETTINGS_BIND_GET)
 	grid.Attach(cbIntensiveLowLevelRsyncLog, DesignSecondCol, row, 1, 1)
 	row++
 
@@ -1510,12 +1748,7 @@ func AdvancedPreferencesNew(gsSettings *glib.Settings) (*gtk.Container, error) {
 	// ---------------------------------------------------------
 	markup = NewMarkup(MARKUP_WEIGHT_BOLD, 0, 0,
 		locale.T(MsgPrefDlgAdvancedRsyncDedupSettingsSection, nil), "")
-	lbl, err = gtk.LabelNew(markup.String())
-	if err != nil {
-		return nil, err
-	}
-	lbl.SetUseMarkup(true)
-	lbl.SetHAlign(gtk.ALIGN_START)
+	lbl, err = SetupLabelMarkupJustifyLeft(markup)
 	if err != nil {
 		return nil, err
 	}
@@ -1523,7 +1756,7 @@ func AdvancedPreferencesNew(gsSettings *glib.Settings) (*gtk.Container, error) {
 	row++
 
 	// Use previous backup if found
-	lbl, err = setupLabelJustifyRight(locale.T(MsgPrefDlgUsePreviousBackupForDedupCaption, nil))
+	lbl, err = SetupLabelJustifyRight(locale.T(MsgPrefDlgUsePreviousBackupForDedupCaption, nil))
 	if err != nil {
 		return nil, err
 	}
@@ -1531,12 +1764,6 @@ func AdvancedPreferencesNew(gsSettings *glib.Settings) (*gtk.Container, error) {
 	if err != nil {
 		return nil, err
 	}
-	//eb.AddEvents(int(gdk.BUTTON_PRESS_MASK))
-	//eb.AddEvents(int(gdk.BUTTON_RELEASE_MASK))
-	//eb.AddEvents(int(gdk.EVENT_BUTTON_PRESS))
-	//eb.AddEvents(int(gdk.EVENT_BUTTON_RELEASE))
-	//eb.AddEvents(int(gdk.EVENT_DOUBLE_BUTTON_PRESS))
-	//	eb.AddEvents(int(gdk.EVENT_DOUBLE_BUTTON_PRESS))
 	eb.Add(lbl)
 	grid.Attach(eb, DesignFirstCol, row, 1, 1)
 	cbPrevBackupUsage, err := gtk.CheckButtonNew()
@@ -1549,12 +1776,6 @@ func AdvancedPreferencesNew(gsSettings *glib.Settings) (*gtk.Container, error) {
 	if err != nil {
 		return nil, err
 	}
-	//eb.Connect("button-release-event", func() {
-	//	cbPrevBackupUsage.SetActive(!cbPrevBackupUsage.GetActive())
-	//})
-	//eb.Connect("toggled", func() {
-	//	cbPrevBackupUsage.SetActive(!cbPrevBackupUsage.GetActive())
-	//})
 	cbPrevBackupUsage.SetTooltipText(locale.T(MsgPrefDlgUsePreviousBackupForDedupHint, nil))
 	cbPrevBackupUsage.SetHAlign(gtk.ALIGN_START)
 	bh.Bind(CFG_ENABLE_USE_OF_PREVIOUS_BACKUP, cbPrevBackupUsage, "active", glib.SETTINGS_BIND_DEFAULT)
@@ -1562,7 +1783,7 @@ func AdvancedPreferencesNew(gsSettings *glib.Settings) (*gtk.Container, error) {
 	row++
 
 	// Number of previous backup to use
-	lbl, err = setupLabelJustifyRight(locale.T(MsgPrefDlgNumberOfPreviousBackupToUseCaption, nil))
+	lbl, err = SetupLabelJustifyRight(locale.T(MsgPrefDlgNumberOfPreviousBackupToUseCaption, nil))
 	if err != nil {
 		return nil, err
 	}
@@ -1590,39 +1811,11 @@ func AdvancedPreferencesNew(gsSettings *glib.Settings) (*gtk.Container, error) {
 	// ---------------------------------------------------------
 	markup = NewMarkup(MARKUP_WEIGHT_BOLD, 0, 0,
 		locale.T(MsgPrefDlgAdvancedRsyncFileTransferOptionsSection, nil), "")
-	lbl, err = gtk.LabelNew(markup.String())
-	if err != nil {
-		return nil, err
-	}
-	lbl.SetUseMarkup(true)
-	lbl.SetHAlign(gtk.ALIGN_START)
+	lbl, err = SetupLabelMarkupJustifyLeft(markup)
 	if err != nil {
 		return nil, err
 	}
 	grid.Attach(lbl, DesignIndentCol, row, DesignTotalColCount, 1)
-	row++
-
-	// Enable/disable RSYNC compress file transfer
-	cbCompressFileTransfer, err := gtk.CheckButtonNew()
-	if err != nil {
-		return nil, err
-	}
-	cbCompressFileTransfer.SetLabel(locale.T(MsgPrefDlgRsyncCompressFileTransferCaption, nil))
-	cbCompressFileTransfer.SetTooltipText(locale.T(MsgPrefDlgRsyncCompressFileTransferHint, nil))
-	cbCompressFileTransfer.SetHAlign(gtk.ALIGN_START)
-	bh.Bind(CFG_RSYNC_COMPRESS_FILE_TRANSFER, cbCompressFileTransfer, "active", glib.SETTINGS_BIND_DEFAULT)
-	grid.Attach(cbCompressFileTransfer, DesignFirstCol, row, 1, 1)
-
-	// Enable/disable RSYNC transfer source permissions
-	cbTransferSourcePermissions, err := gtk.CheckButtonNew()
-	if err != nil {
-		return nil, err
-	}
-	cbTransferSourcePermissions.SetLabel(locale.T(MsgPrefDlgRsyncTransferSourcePermissionsCaption, nil))
-	cbTransferSourcePermissions.SetTooltipText(locale.T(MsgPrefDlgRsyncTransferSourcePermissionsHint, nil))
-	cbTransferSourcePermissions.SetHAlign(gtk.ALIGN_START)
-	bh.Bind(CFG_RSYNC_TRANSFER_SOURCE_PERMISSIONS, cbTransferSourcePermissions, "active", glib.SETTINGS_BIND_DEFAULT)
-	grid.Attach(cbTransferSourcePermissions, DesignSecondCol, row, 1, 1)
 	row++
 
 	// Enable/disable RSYNC transfer source owner
@@ -1648,6 +1841,17 @@ func AdvancedPreferencesNew(gsSettings *glib.Settings) (*gtk.Container, error) {
 	grid.Attach(cbTransferSourceGroup, DesignSecondCol, row, 1, 1)
 	row++
 
+	// Enable/disable RSYNC transfer source permissions
+	cbTransferSourcePermissions, err := gtk.CheckButtonNew()
+	if err != nil {
+		return nil, err
+	}
+	cbTransferSourcePermissions.SetLabel(locale.T(MsgPrefDlgRsyncTransferSourcePermissionsCaption, nil))
+	cbTransferSourcePermissions.SetTooltipText(locale.T(MsgPrefDlgRsyncTransferSourcePermissionsHint, nil))
+	cbTransferSourcePermissions.SetHAlign(gtk.ALIGN_START)
+	bh.Bind(CFG_RSYNC_TRANSFER_SOURCE_PERMISSIONS, cbTransferSourcePermissions, "active", glib.SETTINGS_BIND_DEFAULT)
+	grid.Attach(cbTransferSourcePermissions, DesignFirstCol, row, 1, 1)
+
 	// Enable/disable RSYNC symlinks recreation
 	cbRecreateSymlinks, err := gtk.CheckButtonNew()
 	if err != nil {
@@ -1657,7 +1861,7 @@ func AdvancedPreferencesNew(gsSettings *glib.Settings) (*gtk.Container, error) {
 	cbRecreateSymlinks.SetTooltipText(locale.T(MsgPrefDlgRsyncRecreateSymlinksHint, nil))
 	cbRecreateSymlinks.SetHAlign(gtk.ALIGN_START)
 	bh.Bind(CFG_RSYNC_RECREATE_SYMLINKS, cbRecreateSymlinks, "active", glib.SETTINGS_BIND_DEFAULT)
-	grid.Attach(cbRecreateSymlinks, DesignFirstCol, row, 1, 1)
+	grid.Attach(cbRecreateSymlinks, DesignSecondCol, row, 1, 1)
 	row++
 
 	// Enable/disable RSYNC transfer device files
@@ -1683,6 +1887,18 @@ func AdvancedPreferencesNew(gsSettings *glib.Settings) (*gtk.Container, error) {
 	grid.Attach(cbTransferSpecialFiles, DesignSecondCol, row, 1, 1)
 	row++
 
+	// Enable/disable RSYNC compress file transfer
+	cbCompressFileTransfer, err := gtk.CheckButtonNew()
+	if err != nil {
+		return nil, err
+	}
+	cbCompressFileTransfer.SetLabel(locale.T(MsgPrefDlgRsyncCompressFileTransferCaption, nil))
+	cbCompressFileTransfer.SetTooltipText(locale.T(MsgPrefDlgRsyncCompressFileTransferHint, nil))
+	cbCompressFileTransfer.SetHAlign(gtk.ALIGN_START)
+	bh.Bind(CFG_RSYNC_COMPRESS_FILE_TRANSFER, cbCompressFileTransfer, "active", glib.SETTINGS_BIND_DEFAULT)
+	grid.Attach(cbCompressFileTransfer, DesignFirstCol, row, 1, 1)
+	row++
+
 	box.Add(grid)
 
 	_, err = box.Connect("destroy", func(b *gtk.Box) {
@@ -1694,8 +1910,7 @@ func AdvancedPreferencesNew(gsSettings *glib.Settings) (*gtk.Container, error) {
 
 	return &box.Container, nil
 
-	//bh := BindingHelperNew(gsSettings)
-
+	//bh := NewBindingHelper(gsSettings)
 	_, err = box.Connect("destroy", func() {
 		//bh.Unbind()
 	})
@@ -1704,6 +1919,20 @@ func AdvancedPreferencesNew(gsSettings *glib.Settings) (*gtk.Container, error) {
 	}
 
 	return &box.Container, nil
+}
+
+// ProfileStatusState is used to denote profile validating status.
+type ProfileStatusState int
+
+const (
+	ProfileStatusNone ProfileStatusState = 1 << iota
+	ProfileStatusValidating
+	ProfileStatusError
+)
+
+type ProfileStatus struct {
+	Status      ProfileStatusState
+	Description string
 }
 
 // PreferenceRow keeps here extra data for each page of multi-page preference dialog.
@@ -1718,7 +1947,7 @@ type PreferenceRow struct {
 	Icon      *gtk.Image
 	Page      *gtk.Container
 	Profile   bool
-	Errors    map[uintptr]string
+	Errors    map[uintptr]ProfileStatus
 }
 
 // PreferenceRowNew instantiate new PreferenceRow object.
@@ -1745,7 +1974,7 @@ func PreferenceRowNew(id, title string, page *gtk.Container,
 	}
 	row.Add(box)
 
-	errors := make(map[uintptr]string)
+	errors := make(map[uintptr]ProfileStatus)
 
 	pr := &PreferenceRow{ID: id, Title: title, Row: row,
 		Container: box, Label: lbl, Page: page,
@@ -1765,9 +1994,13 @@ func (v *PreferenceRow) SetName(name string) {
 	if v.Profile {
 		publicName := locale.T(MsgPrefDlgProfileTabName,
 			struct{ ProfileName string }{ProfileName: name})
-		v.Label.SetText(publicName)
+		MustIdleAdd(func() {
+			v.Label.SetText(publicName)
+		})
 	} else {
-		v.Label.SetText(name)
+		MustIdleAdd(func() {
+			v.Label.SetText(name)
+		})
 	}
 }
 
@@ -1780,30 +2013,45 @@ func (v *PreferenceRow) GetName() string {
 }
 
 // setThemedIcon assign icon to the right side of the list box item.
-func (v *PreferenceRow) setThemedIcon(themedName string) error {
+func (v *PreferenceRow) setThemedIcon(themedName string, cssClasses []string) error {
 	img, err := gtk.ImageNew()
 	if err != nil {
 		return err
 	}
+	AddStyleClasses(&img.Widget, cssClasses)
 	img.SetFromIconName(themedName, gtk.ICON_SIZE_BUTTON)
-	v.clearIcon()
-	v.Icon = img
-	v.Container.PackEnd(img, false, false, 0)
-	v.Container.ShowAll()
+	v.assignImage(img)
+	return nil
+}
+
+// setAssetsIconAnimation assign icon to the right side of the list box item.
+func (v *PreferenceRow) setAssetsIconAnimation(assetName string, resizeToWidth, resizeToHeight int) error {
+	img, err := AnimationImageFromAssetsNewWithResize(assetName, resizeToWidth, resizeToHeight)
+	if err != nil {
+		return err
+	}
+	v.assignImage(img)
 	return nil
 }
 
 // setAssetsIcon assign icon to the right side of the list box item.
-func (v *PreferenceRow) setAssetsIcon(assetName string) error {
-	img, err := ImageFromAssetsNew(assetName, 16, 16)
+func (v *PreferenceRow) setAssetsIcon(assetName string, cssClasses []string) error {
+	img, err := ImageFromAssetsNewWithResize(assetName, 16, 16)
 	if err != nil {
 		return err
 	}
-	v.clearIcon()
-	v.Icon = img
-	v.Container.PackEnd(img, false, false, 0)
-	v.Container.ShowAll()
+	AddStyleClasses(&img.Widget, cssClasses)
+	v.assignImage(img)
 	return nil
+}
+
+func (v *PreferenceRow) assignImage(image *gtk.Image) {
+	MustIdleAdd(func() {
+		v.clearIcon()
+		v.Icon = image
+		v.Container.PackEnd(image, false, false, 0)
+		v.Container.ShowAll()
+	})
 }
 
 // clearIcon removes icon from the list box item.
@@ -1816,67 +2064,114 @@ func (v *PreferenceRow) clearIcon() {
 
 // setTooltipMarkup assign tooltip to the list box item.
 func (v *PreferenceRow) setTooltipMarkup(tooltip string) {
-	v.Row.SetTooltipMarkup(tooltip)
+	MustIdleAdd(func() {
+		v.Row.SetTooltipMarkup(tooltip)
+	})
 }
 
-// updateErrorStatus clear or set error status to the list box item.
-func (v *PreferenceRow) updateErrorStatus() error {
-	found := false
+// getCurrentStatus return bitmask which describe existing
+// validation statuses for current profile.
+func (v *PreferenceRow) getCurrentStatus() ProfileStatusState {
+	var errorFound, validatingFound bool
 	for _, v := range v.Errors {
-		if v != "" {
+		if v.Status == ProfileStatusError {
 			lg.Debugf("PreferenceRow error %q", v)
-			found = true
-			break
+			errorFound = true
+		} else if v.Status == ProfileStatusValidating {
+			lg.Debugf("PreferenceRow validating %q", v)
+			validatingFound = true
 		}
 	}
-	//	glib.IdleAdd(func() {
-	if found {
-		lg.Debug("Error found")
-		markup := NewMarkup(0, MARKUP_COLOR_ORANGE_RED, 0,
-			locale.T(MsgPrefDlgProfileConfigIssuesDetectedWarning, nil), nil)
-		v.setTooltipMarkup(markup.String())
-		err := v.setAssetsIcon(ASSET_IMPORTANT_ICON)
-		if err != nil {
-			lg.Fatal(err)
-		}
-	} else {
-		lg.Debug("No errors found")
-		v.setTooltipMarkup("")
-		v.clearIcon()
+	var flags ProfileStatusState
+	if errorFound {
+		flags |= ProfileStatusError
 	}
-	//	})
+	if validatingFound {
+		flags |= ProfileStatusValidating
+	}
+	return flags
+}
+
+// updateErrorStatus clear or set validation statuses to the list box item.
+// It proceeds, if only changes from last update found.
+func (v *PreferenceRow) updateErrorStatus(lastStatus ProfileStatusState) error {
+	newStatus := v.getCurrentStatus()
+
+	var validatingChanged, errorChanged bool
+
+	if lastStatus&ProfileStatusValidating != newStatus&ProfileStatusValidating {
+		validatingChanged = true
+	}
+	if lastStatus&ProfileStatusError != newStatus&ProfileStatusError {
+		errorChanged = true
+	}
+
+	if validatingChanged || errorChanged {
+		if newStatus&ProfileStatusValidating != 0 {
+			lg.Debug("Validating found")
+			markup := NewMarkup(0, MARKUP_COLOR_SKY_BLUE, 0,
+				locale.T(MsgPrefDlgSourceRsyncValidatingHint, nil), nil)
+			v.setTooltipMarkup(markup.String())
+			// err := v.setAssetsIconAnimation(ASSET_SYNCHRONIZING_ANIMATED_64x64_ICON, 16, 16)
+			err := v.setThemedIcon(STOCK_SYNCHRONIZING_ICON, []string{"image-spin"})
+			if err != nil {
+				lg.Fatal(err)
+			}
+		} else if newStatus&ProfileStatusError != 0 {
+			lg.Debug("Error found")
+			markup := NewMarkup(0, MARKUP_COLOR_ORANGE_RED, 0,
+				locale.T(MsgPrefDlgProfileConfigIssuesDetectedWarning, nil), nil)
+			v.setTooltipMarkup(markup.String())
+			err := v.setThemedIcon(STOCK_IMPORTANT_ICON, []string{"image-error", "image-shake"})
+			if err != nil {
+				lg.Fatal(err)
+			}
+		} else {
+			lg.Debug("No errors found")
+			v.setTooltipMarkup("")
+			MustIdleAdd(func() {
+				v.clearIcon()
+			})
+		}
+	}
 	return nil
 }
 
-// AddErrorStatus add error status to the list box item.
-func (v *PreferenceRow) AddErrorStatus(sourceID uintptr, err string) error {
+// AddStatus add error status to the list box item.
+func (v *PreferenceRow) AddStatus(sourceID uintptr,
+	status ProfileStatusState, description string) error {
+
 	v.Lock()
 	defer v.Unlock()
 
-	v.Errors[sourceID] = err
+	lastStatus := v.getCurrentStatus()
 
-	err2 := v.updateErrorStatus()
+	v.Errors[sourceID] = ProfileStatus{Status: status, Description: description}
+
+	err2 := v.updateErrorStatus(lastStatus)
 	if err2 != nil {
 		return err2
 	}
 	return nil
 }
 
-// RemoveErrorStatus removes error status from the list box item.
-func (v *PreferenceRow) RemoveErrorStatus(sourceID uintptr) error {
+// RemoveStatus removes error status from the list box item.
+func (v *PreferenceRow) RemoveStatus(sourceID uintptr) error {
 	v.Lock()
 	defer v.Unlock()
+
+	lastStatus := v.getCurrentStatus()
 
 	delete(v.Errors, sourceID)
 
-	err2 := v.updateErrorStatus()
+	err2 := v.updateErrorStatus(lastStatus)
 	if err2 != nil {
 		return err2
 	}
 	return nil
 }
 
-// PreferenceRowList keeps a link between GtkListBoxRow
+// PreferenceRowList keep a link between GtkListBoxRow
 // and specific PreferenceRow object.
 type PreferenceRowList struct {
 	m      map[uintptr]*PreferenceRow
@@ -1938,34 +2233,17 @@ func (v *PreferenceRowList) GetProfiles() []*PreferenceRow {
 	return rows
 }
 
-/*
-func findProfilesByNameTillCurrent(list []*PreferenceRow,
-	current *PreferenceRow, profileName string) []*PreferenceRow {
-
-	rows := []*PreferenceRow{}
-	for _, pr := range list {
-		if pr == current {
-			break
-		}
-		if pr.GetName() == profileName {
-			rows = append(rows, pr)
-		}
-	}
-	return rows
-}
-*/
-
 // addProfilePage build UI on the top of profile taken from GlibSettings.
-func addProfilePage(profileID string, initProfileName *string, appSettings *glib.Settings,
-	list *PreferenceRowList, validator *UIValidator, lbSide *gtk.ListBox, pages *gtk.Stack, selectNew bool,
-	profileChanged *bool) error {
+func addProfilePage(win *gtk.ApplicationWindow, profileID string, initProfileName *string,
+	appSettings *SettingsStore, list *PreferenceRowList, validator *UIValidator,
+	lbSide *gtk.ListBox, pages *gtk.Stack, selectNew bool, profileChanged func()) error {
 
 	prefRow, err := PreferenceRowNew(profileID,
 		locale.T(MsgPrefDlgGeneralProfileTabName, nil), nil, true)
 	if err != nil {
 		return err
 	}
-	page, profileName, err := BackupPreferencesNew(appSettings, list, validator,
+	page, profileName, err := ProfilePreferencesNew(win, appSettings, validator,
 		profileID, prefRow, profileChanged, initProfileName)
 	if err != nil {
 		return err
@@ -1984,9 +2262,11 @@ func addProfilePage(profileID string, initProfileName *string, appSettings *glib
 	return nil
 }
 
-// Create multi-page preference dialog
+// CreatePreferenceDialog creates multi-page preference dialog
 // with save/restore functionality to/from the GLib Setting object.
-func CreatePreferenceDialog(settingsID string, app *gtk.Application, profileChanged *bool) (*gtk.ApplicationWindow, error) {
+func CreatePreferenceDialog(settingsID, settingsPath string, app *gtk.Application,
+	profileChanged func()) (*gtk.ApplicationWindow, error) {
+
 	parentWin := app.GetActiveWindow()
 	win, err := gtk.ApplicationWindowNew(app)
 	if err != nil {
@@ -1997,7 +2277,7 @@ func CreatePreferenceDialog(settingsID string, app *gtk.Application, profileChan
 	win.SetTransientFor(parentWin)
 	win.SetDestroyWithParent(false)
 	win.SetShowMenubar(false)
-	appSettings, err := glib.SettingsNew(settingsID)
+	appSettings, err := NewSettingsStore(settingsID, settingsPath, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -2016,14 +2296,23 @@ func CreatePreferenceDialog(settingsID string, app *gtk.Application, profileChan
 	hbSide.SetHExpand(false)
 
 	bTitle, err := gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 0)
+	if err != nil {
+		return nil, err
+	}
 	bTitle.Add(hbSide)
 	sTitle, err := gtk.SeparatorNew(gtk.ORIENTATION_VERTICAL)
+	if err != nil {
+		return nil, err
+	}
 	bTitle.Add(sTitle)
 	bTitle.Add(hbMain)
 
 	win.SetTitlebar(bTitle)
 
 	var list = PreferenceRowListNew()
+	// TODO: better to create and keep this variable in global context
+	// to skip possible race issues, in case of multiple preference
+	// windows opened simultaneously.
 	var validator = UIValidatorNew(context.Background())
 
 	_, err = win.Connect("destroy", func() {
@@ -2052,18 +2341,18 @@ func CreatePreferenceDialog(settingsID string, app *gtk.Application, profileChan
 
 	var pr *PreferenceRow
 
-	profileSettingsArray := NewSettingsArray(appSettings, CFG_BACKUP_LIST)
+	profileSettingsArray := appSettings.NewSettingsArray(CFG_BACKUP_LIST)
 	profileList := profileSettingsArray.GetArrayIDs()
 	if len(profileList) == 0 {
 		profileID, err := profileSettingsArray.AddNode()
 		if err != nil {
 			return nil, err
 		}
-		backupSettings, err := getBackupSettings(profileID, nil)
+		profileSettings, err := getProfileSettings(appSettings, profileID, nil)
 		if err != nil {
 			return nil, err
 		}
-		sarr := NewSettingsArray(backupSettings, CFG_SOURCE_LIST)
+		sarr := profileSettings.NewSettingsArray(CFG_SOURCE_LIST)
 		_, err = sarr.AddNode()
 		if err != nil {
 			return nil, err
@@ -2072,14 +2361,14 @@ func CreatePreferenceDialog(settingsID string, app *gtk.Application, profileChan
 		if i, err := strconv.Atoi(profileID); err == nil {
 			profileName = strconv.Itoa(i + 1)
 		}
-		err = addProfilePage(profileID, &profileName, appSettings, list,
+		err = addProfilePage(win, profileID, &profileName, appSettings, list,
 			validator, lbSide, pages, false, profileChanged)
 		if err != nil {
 			return nil, err
 		}
 	} else {
 		for _, profileID := range profileList {
-			err = addProfilePage(profileID, nil, appSettings, list,
+			err = addProfilePage(win, profileID, nil, appSettings, list,
 				validator, lbSide, pages, false, profileChanged)
 			if err != nil {
 				return nil, err
@@ -2148,11 +2437,11 @@ func CreatePreferenceDialog(settingsID string, app *gtk.Application, profileChan
 		if err != nil {
 			lg.Fatal(err)
 		}
-		backupSettings, err := getBackupSettings(profileID, profileChanged)
+		profileSettings, err := getProfileSettings(appSettings, profileID, profileChanged)
 		if err != nil {
 			lg.Fatal(err)
 		}
-		sarr := NewSettingsArray(backupSettings, CFG_SOURCE_LIST)
+		sarr := profileSettings.NewSettingsArray(CFG_SOURCE_LIST)
 		_, err = sarr.AddNode()
 		if err != nil {
 			lg.Fatal(err)
@@ -2162,19 +2451,30 @@ func CreatePreferenceDialog(settingsID string, app *gtk.Application, profileChan
 		if i, err := strconv.Atoi(profileID); err == nil {
 			profileName = strconv.Itoa(i + 1)
 		}
-		err = addProfilePage(profileID, &profileName, appSettings, list,
+		err = addProfilePage(win, profileID, &profileName, appSettings, list,
 			validator, lbSide, pages, true, profileChanged)
 		if err != nil {
 			lg.Fatal(err)
 		}
 		if profileChanged != nil {
-			*profileChanged = true
+			profileChanged()
 		}
 	})
 	if err != nil {
 		return nil, err
 	}
 	bButtons.PackStart(btnAddProfile, false, false, 0)
+
+	updateBtnDeleteProfileSensitive := func(deleteBtn *gtk.Button, row *gtk.ListBoxRow) {
+		var pr *PreferenceRow
+		if row != nil {
+			pr = list.Get(row.Native())
+			pages.SetVisibleChildName(pr.ID)
+			hbMain.SetTitle(pr.Title)
+		}
+		deleteBtn.SetSensitive(pr != nil && pr.Profile && list.GetProfileCount() > 1)
+	}
+
 	btnDeleteProfile, err := SetupButtonWithThemedImage("list-remove-symbolic")
 	if err != nil {
 		return nil, err
@@ -2185,11 +2485,10 @@ func CreatePreferenceDialog(settingsID string, app *gtk.Application, profileChan
 		titleMarkup := NewMarkup(MARKUP_SIZE_LARGER, 0, 0, nil, nil,
 			NewMarkup(MARKUP_SIZE_LARGER, 0, 0, title, nil))
 		yesButtonCaption := locale.T(MsgDialogYesButton, nil)
-		yesButtonMarkup := NewMarkup(MARKUP_SIZE_LARGER, 0, 0, yesButtonCaption, nil)
-		textMarkup := locale.T(MsgPrefDlgDeleteProfileDialogText, struct{ YesButton string }{YesButton: yesButtonMarkup.String()})
+		yesButtonMarkup := NewMarkup(MARKUP_SIZE_LARGER, 0, 0, removeUndescore(yesButtonCaption), nil)
+		textMarkup := locale.T(MsgPrefDlgDeleteProfileDialogText,
+			struct{ YesButton string }{YesButton: yesButtonMarkup.String()})
 		responseYes, err := questionDialog(&win.Window, titleMarkup.String(), textMarkup, true, true, false)
-		// responseYes, err := QuestionDialog(&win.Window, title,
-		// 	[]*DialogParagraph{NewDialogParagraph(text)}, false)
 		if err != nil {
 			lg.Fatal(err)
 		}
@@ -2200,14 +2499,14 @@ func CreatePreferenceDialog(settingsID string, app *gtk.Application, profileChan
 			pr := list.Get(sr.Native())
 			if pr.Profile {
 				profileID := pr.ID
-				backupSettings, err := getBackupSettings(profileID, profileChanged)
+				profileSettings, err := getProfileSettings(appSettings, profileID, profileChanged)
 				if err != nil {
 					lg.Fatal(err)
 				}
-				sarr := NewSettingsArray(backupSettings, CFG_SOURCE_LIST)
+				sarr := profileSettings.NewSettingsArray(CFG_SOURCE_LIST)
 				ids := sarr.GetArrayIDs()
 				for _, sourceID := range ids {
-					sourceSettings, err := getBackupSourceSettings(profileID, sourceID, profileChanged)
+					sourceSettings, err := getBackupSourceSettings(profileSettings, sourceID, profileChanged)
 					if err != nil {
 						lg.Fatal(err)
 					}
@@ -2217,7 +2516,7 @@ func CreatePreferenceDialog(settingsID string, app *gtk.Application, profileChan
 					}
 				}
 
-				err = profileSettingsArray.DeleteNode(backupSettings, profileID)
+				err = profileSettingsArray.DeleteNode(profileSettings, profileID)
 				if err != nil {
 					lg.Fatal(err)
 				}
@@ -2227,8 +2526,10 @@ func CreatePreferenceDialog(settingsID string, app *gtk.Application, profileChan
 				list.Delete(sr.Native())
 				pr.Page.Destroy()
 				sr.Destroy()
+				updateBtnDeleteProfileSensitive(btnDeleteProfile, lbSide.GetSelectedRow())
+
 				if profileChanged != nil {
-					*profileChanged = true
+					profileChanged()
 				}
 			}
 		}
@@ -2240,11 +2541,7 @@ func CreatePreferenceDialog(settingsID string, app *gtk.Application, profileChan
 
 	_, err = lbSide.Connect("row-selected", func(lb *gtk.ListBox, row *gtk.ListBoxRow) {
 		lg.Debugf("Row at index %d selected", row.GetIndex())
-		pr := list.Get(row.Native())
-		//lg.Println(spew.Sprintf("%+v", r1))
-		pages.SetVisibleChildName(pr.ID)
-		hbMain.SetTitle(pr.Title)
-		btnDeleteProfile.SetSensitive(pr.Profile && list.GetProfileCount() > 1)
+		updateBtnDeleteProfileSensitive(btnDeleteProfile, row)
 	})
 	if err != nil {
 		return nil, err
@@ -2277,12 +2574,6 @@ func CreatePreferenceDialog(settingsID string, app *gtk.Application, profileChan
 	}
 	sgMain.AddWidget(hbMain)
 	sgMain.AddWidget(pages)
-
-	// Set initial title
-	//hbMain.SetTitle("Global")
-
-	//win.SetDefaultSize(1000, -1)
-	//	win.SetDefaultSize(500, -1)
 
 	return win, nil
 }

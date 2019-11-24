@@ -1,0 +1,127 @@
+/* Standard icon rotation animation.
+ */
+@keyframes spin {
+	 to { -gtk-icon-transform: rotate(1turn); }
+}
+
+/* Visual Bell Animation, note each frame defined
+   separately because GTK doesn't support grouping them
+   together like normal CSS.
+   Taken with some modifications from open source Tilix project.
+ */
+@keyframes shake {
+    0%   {-gtk-icon-transform: translateX(0);}
+    10% {-gtk-icon-transform: translateX(0);}
+    1%  {-gtk-icon-transform: translateX(-2px);}
+    3%  {-gtk-icon-transform: translateX(-1.5px);}
+    5%  {-gtk-icon-transform: translateX(-0.9px);}
+    7%  {-gtk-icon-transform: translateX(-0.6px);}
+    9%  {-gtk-icon-transform: translateX(-0.3px);}
+    2%  {-gtk-icon-transform: translateX(2px);}
+    4%  {-gtk-icon-transform: translateX(1.5px);}
+    6%  {-gtk-icon-transform: translateX(0.9px);}
+    8%  {-gtk-icon-transform: translateX(0.6px);}
+}
+
+/****************
+ *     Entry    *
+ ****************/
+
+entry.entry-image-right-spin image.right {
+	animation: spin 2s linear infinite;
+}
+
+entry.entry-image-right-error image.right {
+    color: @error_color;
+}
+
+entry.entry-image-right-warning image.right {
+    color: @warning_color;
+}
+
+entry.entry-image-right-shake image.right {
+	animation: shake 8s linear infinite;
+}
+
+/****************
+ *     Image    *
+ ****************/
+image.image-spin {
+	animation: spin 2s linear infinite;
+}
+
+image.image-error {
+    color: @error_color;
+}
+
+image.image-warning  {
+    color: @warning_color;
+}
+
+image.image-shake {
+	animation: shake 10s linear infinite;
+}
+
+
+/****************
+ * Progress bar *
+ ****************/
+progressbar progress, trough {
+  min-height: 20px;
+}
+
+@keyframes blink {
+	
+	from { background-image: linear-gradient(to top, @theme_bg_color, @progressbar_bg_color); }
+	
+	50% { background-image: linear-gradient(to top, alpha(@theme_bg_color, 0.9), alpha(@theme_bg_color, 0.5)); }
+	
+	to { background-image: linear-gradient(to bottom, @progressbar_bg_color, @theme_bg_color); }
+	
+	/*
+	from { background-image: linear-gradient(to top, alpha(@theme_bg_color, 1), alpha(@progressbar_bg_color, 1)); }
+	50% { background-image: linear-gradient(to top, alpha(@theme_bg_color, 0.9), alpha(@progressbar_bg_color, 0.1)); }
+	to { background-image: linear-gradient(to top, alpha(@theme_bg_color, 1), alpha(@progressbar_bg_color, 1)); }
+	*/
+}
+
+progressbar progress {
+
+
+	background-image: linear-gradient(to top, alpha(@theme_bg_color, 0.7), @progressbar_bg_color);
+
+	
+
+    border-radius: 3px;
+    border-style: solid;
+    
+    border-color: @progressbar_border;
+
+}
+
+progressbar.run-animation progress {
+
+    animation-name: blink;
+    
+    animation-duration: 5s;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+    
+	}
+
+/*
+progressbar progress {
+	background-image: linear-gradient(to top, @theme_bg_color, @theme_fg_color);
+
+    border-radius: 3px;
+    border-style: solid;
+    border-color: alpha(@progressbar_border, 0.01);
+}
+*/
+
+
+/*
+progressbar trough {
+    background-color: rgba(255, 255, 255, 255);
+}
+*/

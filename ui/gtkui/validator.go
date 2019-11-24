@@ -2,9 +2,8 @@ package gtkui
 
 import (
 	"context"
+	"fmt"
 	"sync"
-
-	"github.com/d2r2/gotk3/glib"
 )
 
 // ValidatorData is an array of arbitrary data
@@ -13,78 +12,104 @@ type ValidatorData struct {
 	Items []interface{}
 }
 
-// ValidatorInit init validation process with next attributes:
+// ValidatorInit initialize validation process with next attributes:
 // - Synchronous call.
-// - Should take a limited time.
-// - Allowed to updated GTK widgets.
+// - Should take a limited time to execute.
+// - Allowed to updated GTK+ widgets.
 type ValidatorInit func(data *ValidatorData, group []*ValidatorData) error
 
 // ValidatorRun run validation process with next characteristics:
 // - Asynchronous call.
 // - Can take long time to run.
-// - GTK widgets should not be updated here (read only allowed).
-type ValidatorRun func(ctx context.Context, data *ValidatorData,
+// - GTK+ widgets should not be updated here (read only allowed).
+type ValidatorRun func(groupLock *sync.Mutex, ctx context.Context, data *ValidatorData,
 	group []*ValidatorData) ([]interface{}, error)
 
 // ValidatorEnd finalize validation process with next characteristics:
-// - Synchronous call.
-// - Should take a limited time.
-// - Allowed to updated GTK widgets.
-type ValidatorEnd func(data *ValidatorData, results []interface{}) error
+// - Asynchronous call.
+// - Should take a limited time to execute.
+// - GTK+ widgets might be updated here, if you wrap calls to glib.IdleAdd method.
+type ValidatorEnd func(groupLock *sync.Mutex, data *ValidatorData, results []interface{}) error
 
 // ValidatorEntry stores validation data all together,
-// including 3-step validation process (init, run, finallize).
+// including 3-step validation process (initialize, run, finalize).
 type ValidatorEntry struct {
-	GroupName string
-	init      ValidatorInit
-	run       ValidatorRun
-	end       ValidatorEnd
-	Data      *ValidatorData
+	group string
+	index string
+	init  ValidatorInit
+	run   ValidatorRun
+	end   ValidatorEnd
+	Data  *ValidatorData
 }
 
-// GroupMap gives thread-safe dictionary,
+// GroupMap gives thread-safe indexed dictionary,
 // which allow manipulations in asynchronous mode.
+// Store validator groups uniquely identified
+// by group and index identifiers.
 type GroupMap struct {
 	sync.RWMutex
-	m map[string]*ContextPack
+	m    map[string]*ContextPack // keep Context object here indexed by group+index identifiers
+	lock map[string]*sync.Mutex  // keep lock object here indexed by group identifier
 }
 
 func GroupMapNew() *GroupMap {
-	v := &GroupMap{m: make(map[string]*ContextPack)}
+	v := &GroupMap{m: make(map[string]*ContextPack),
+		lock: make(map[string]*sync.Mutex)}
 	return v
 }
 
-func (v *GroupMap) Add(groupName string, ctxPack *ContextPack) {
+// getFullIndex return complex index from concatenation
+// of group and index identifiers.
+func getFullIndex(group, index string) string {
+	return fmt.Sprintf("%s_%s", group, index)
+}
+
+// Add create new group identified by group+index identifiers.
+// if not exists create, either return it.
+func (v *GroupMap) Add(group, index string, ctxPack *ContextPack) {
 	v.Lock()
 	defer v.Unlock()
 
-	v.m[groupName] = ctxPack
+	v.m[getFullIndex(group, index)] = ctxPack
 }
 
-func (v *GroupMap) Remove(groupName string) {
-	v.Lock()
-	defer v.Unlock()
-
-	delete(v.m, groupName)
-}
-
-func (v *GroupMap) Get(groupName string) (*ContextPack, bool) {
+// Get return group context identified by group+index identifiers if exists.
+func (v *GroupMap) Get(group, index string) (*ContextPack, bool) {
 	v.RLock()
 	defer v.RUnlock()
 
-	ctxPack, ok := v.m[groupName]
+	ctxPack, ok := v.m[getFullIndex(group, index)]
 	return ctxPack, ok
 }
 
+// GetLock return lock object identified by group identifier.
+func (v *GroupMap) GetLock(group string) *sync.Mutex {
+	v.Lock()
+	defer v.Unlock()
+
+	if _, ok := v.lock[group]; !ok {
+		v.lock[group] = &sync.Mutex{}
+	}
+	return v.lock[group]
+}
+
+// Remove delete group object identified by group+index identifiers.
+func (v *GroupMap) Remove(group, index string) {
+	v.Lock()
+	defer v.Unlock()
+
+	delete(v.m, getFullIndex(group, index))
+}
+
 // UIValidator simplify GTK UI validation process
-// mixing synchronized and asynchroniouse calls,
+// mixing synchronized and asynchronous calls,
 // which all together does not freeze GTK UI,
-// providing beautifull GTK UI responce.
+// providing beautiful GTK UI response.
 // UIValidator is a thread-safe (except cases
 // when you need update GtkWidget components -
 // you must be careful in such circumstances).
 type UIValidator struct {
-	sync.Mutex
+	sync.RWMutex
 	entries         map[int]*ValidatorEntry
 	sorted          []int
 	key             int
@@ -100,13 +125,15 @@ func UIValidatorNew(parent context.Context) *UIValidator {
 	return v
 }
 
-func (v *UIValidator) AddEntry(groupName string, init ValidatorInit, run ValidatorRun, end ValidatorEnd,
-	data ...interface{}) int {
+// AddEntry creates new validating process with specific groupID and subGroupID identifiers.
+// Provide additionally 3 callback methods: to initialize, to run and to finalize validation.
+func (v *UIValidator) AddEntry(group, index string, init ValidatorInit, run ValidatorRun,
+	end ValidatorEnd, data ...interface{}) int {
 
 	v.Lock()
 	defer v.Unlock()
 
-	vEntry := &ValidatorEntry{GroupName: groupName,
+	vEntry := &ValidatorEntry{group: group, index: index,
 		init: init, run: run, end: end, Data: &ValidatorData{data}}
 	key := v.key
 	v.entries[key] = vEntry
@@ -115,14 +142,15 @@ func (v *UIValidator) AddEntry(groupName string, init ValidatorInit, run Validat
 	return key
 }
 
+// RemoveEntry remove validating process via index key.
 func (v *UIValidator) RemoveEntry(key int) {
 	v.Lock()
 	defer v.Unlock()
 
 	if val, ok := v.entries[key]; ok {
-		v.cancelValidateIfRunning(val.GroupName)
+		v.cancelValidatesIfRunning(val.group, val.index)
 
-		lg.Debugf("Delete group %q with index %v", val.GroupName, key)
+		lg.Debugf("Delete item %q with index %v", getFullIndex(val.group, val.index), key)
 		delete(v.entries, key)
 	}
 	for ind, k := range v.sorted {
@@ -133,27 +161,32 @@ func (v *UIValidator) RemoveEntry(key int) {
 	}
 }
 
+// GetCount return number of validating processes.
 func (v *UIValidator) GetCount() int {
-	v.Lock()
-	defer v.Unlock()
+	v.RLock()
+	defer v.RUnlock()
 
 	return len(v.entries)
 }
 
-func (v *UIValidator) getGroupEntries(groupName string) []*ValidatorEntry {
+// getGroupEntries return list of ValidatorEntry objects,
+// identified by group + index identifiers.
+func (v *UIValidator) getGroupEntries(group, index string) []*ValidatorEntry {
 	var list []*ValidatorEntry
 	for _, key := range v.sorted {
-		if v.entries[key].GroupName == groupName {
+		if v.entries[key].group == group && v.entries[key].index == index {
 			list = append(list, v.entries[key])
 		}
 	}
 	return list
 }
 
-func (v *UIValidator) getGroupData(groupName string) []*ValidatorData {
+// getGroupData return list of ValidatorData objects,
+// identified by group + index identifiers.
+func (v *UIValidator) getGroupData(group, index string) []*ValidatorData {
 	var list []*ValidatorData
 	for _, key := range v.sorted {
-		if v.entries[key].GroupName == groupName {
+		if v.entries[key].group == group && v.entries[key].index == index {
 			list = append(list, v.entries[key].Data)
 		}
 	}
@@ -161,134 +194,138 @@ func (v *UIValidator) getGroupData(groupName string) []*ValidatorData {
 }
 
 // resultsOrError used to get results from
-// asynchonous context.
+// validator asynchronous context execution.
 type resultsOrError struct {
 	Entry   *ValidatorEntry
 	Results []interface{}
 	Error   error
 }
 
-// callEnd run 3rd validation step asynchronously,
-// but synchronize call with Gtk+ context via
-// glib.IdleAdd function.
-func (v *UIValidator) callEnd(r resultsOrError) {
-	_, err := glib.IdleAdd(func() {
-		err := r.Entry.end(r.Entry.Data, r.Results)
-		if err != nil {
-			lg.Fatal(err)
-		}
-	})
-	if err != nil {
-		lg.Fatal(err)
-	}
-}
-
-// callRun run 2nd validation step asynchronously.
-func (v *UIValidator) callRun(ctx context.Context, entry *ValidatorEntry,
-	dataList []*ValidatorData) ([]interface{}, error) {
-
-	return entry.run(ctx, entry.Data, dataList)
-}
-
-// callRun run 1st validation step synchronously.
+// callInit run 1st validation step synchronously.
 func (v *UIValidator) callInit(entry *ValidatorEntry, dataList []*ValidatorData) error {
 
 	return entry.init(entry.Data, dataList)
 }
 
+// callRun run 2nd validation step asynchronously.
+func (v *UIValidator) callRun(groupLock *sync.Mutex, ctx context.Context,
+	entry *ValidatorEntry, dataList []*ValidatorData) ([]interface{}, error) {
+
+	return entry.run(groupLock, ctx, entry.Data, dataList)
+}
+
+// callEnd run 3rd validation step asynchronously, but can be
+// synchronized with GTK+ context via glib.IdleAdd function.
+func (v *UIValidator) callEnd(groupLock *sync.Mutex, r resultsOrError) {
+	err := r.Entry.end(groupLock, r.Entry.Data, r.Results)
+	if err != nil {
+		lg.Fatal(err)
+	}
+}
+
 // runAsync run 2nd and 3rd validation process steps.
-func (v *UIValidator) runAsync(groupName string, entryList []*ValidatorEntry,
+func (v *UIValidator) runAsync(group, index string, entryList []*ValidatorEntry,
 	dataList []*ValidatorData) {
 
-	waitCh := make(chan resultsOrError)
-	done := make(chan struct{})
+	resultCh := make(chan resultsOrError)
 
 	ctxPack := ForkContext(v.parent)
 	v.runningContexts.AddContext(ctxPack)
-	v.groupRunning.Add(groupName, ctxPack)
+	v.groupRunning.Add(group, index, ctxPack)
+	groupLock := v.groupRunning.GetLock(group)
+	var wait sync.WaitGroup
+	wait.Add(1)
 
-	// run here 3rd validation step, with
+	// Run 3rd validation step in advance, to wait for results
+	// from 2nd validation steps.
 	go func() {
+		defer wait.Done()
+
+		terminated := false
 		for {
 			select {
-			case r := <-waitCh:
-				terminated := false
-				select {
-				case <-ctxPack.Context.Done():
-					terminated = true
-				default:
-				}
-				if !terminated {
-					lg.Debugf("Read Validator results: %v", r)
+			case r, ok := <-resultCh:
+				if ok {
 					err := r.Error
-					if r.Error == nil {
+					if err == nil {
+						lg.Debugf("Read Validator results %v", r.Results)
 						lg.Debugf("Call Validator End")
-						v.callEnd(r)
-					}
-					if err != nil {
+						v.callEnd(groupLock, r)
+					} else {
 						lg.Fatal(err)
 					}
+				} else {
+					lg.Debugf("Complete group %q validation 2", getFullIndex(group, index))
+					terminated = true
 				}
-			case <-done:
-				lg.Debugf("Complete group %q validation 2", groupName)
-				close(waitCh)
-				return
+			case <-ctxPack.Context.Done():
+				terminated = true
+			}
+			if terminated {
+				break
 			}
 		}
 	}()
 
-	// run here 2nd validation step
+	// Run 2nd validation step.
 	go func() {
+		terminated := false
 		for _, item := range entryList {
 			r := resultsOrError{Entry: item}
-			results, err := v.callRun(ctxPack.Context, item, dataList)
+			results, err := v.callRun(groupLock, ctxPack.Context, item, dataList)
 			if err != nil {
 				r.Error = err
 			} else {
 				r.Results = results
 			}
 			select {
-			case waitCh <- r:
-				lg.Debugf("Send Validator results: %v", r)
+			case resultCh <- r:
 			case <-ctxPack.Context.Done():
+				terminated = true
+			}
+			if terminated {
 				break
 			}
 		}
-		lg.Debugf("Complete group %q validation 1", groupName)
-		close(done)
+		lg.Debugf("Complete group %q validation 1", getFullIndex(group, index))
+		close(resultCh)
+		// Wait for completion of 3rd validation step (finalizer), before exit.
+		wait.Wait()
 		v.runningContexts.RemoveContext(ctxPack.Context)
-		v.groupRunning.Remove(groupName)
+		v.groupRunning.Remove(group, index)
 	}()
 }
 
-// cancelValidateIfRunning checks if validation process
-// in progress and cancel it.
-func (v *UIValidator) cancelValidateIfRunning(groupName string) {
-	if ctxPack, ok := v.groupRunning.Get(groupName); ok {
-		lg.Debugf("Cancel group %q validation", groupName)
+// cancelValidatesIfRunning checks if validation process
+// in progress and thus cancel it.
+func (v *UIValidator) cancelValidatesIfRunning(group, index string) {
+	if ctxPack, ok := v.groupRunning.Get(group, index); ok {
+		lg.Debugf("Cancel group %q validation", getFullIndex(group, index))
 		ctxPack.Cancel()
 	}
 }
 
-// Validate is main entry point to start validation process
+// Validate is a main entry point to start validation process
 // for specific group.
 // Validate process trigger next strictly sequential steps:
-// 1) Call "init validatation" custom function in synchronous context.
-// So, it's safe to update Gtk+ widgets here.
+// 1) Call "init validation" custom function in synchronous context.
+// So, it's safe to update GTK+ widgets here.
 // 2) Call "run validation" custom function in asynchronous context.
-// You should never update Gtk+ widgets here (you can read widgets), but might run
+// You should never update GTK+ widgets here (you can read widgets), but might run
 // long-term operations here (for instance run some external application).
 // 3) Call "finalize validation" custom function in asynchronous context.
-// Still you can update Gtk+ widgets here again, because this call synchonized
-// with Gtk+ context via glib.IdleAdd() function from GOTK+ library.
-func (v *UIValidator) Validate(groupName string) error {
+// You can update GTK+ widgets here, if you wrap code there with glib.IdleAdd()
+// function from GOTK+ library to synchronize with GTK+ context.
+func (v *UIValidator) Validate(group, index string) error {
 	v.Lock()
 	defer v.Unlock()
 
-	entryList := v.getGroupEntries(groupName)
-	dataList := v.getGroupData(groupName)
+	entryList := v.getGroupEntries(group, index)
+	dataList := v.getGroupData(group, index)
 	if len(entryList) > 0 {
-		v.cancelValidateIfRunning(groupName)
+		// If found that previous validation processes in progress
+		// with specific id still, then cancel it.
+		v.cancelValidatesIfRunning(group, index)
 
 		for _, item := range entryList {
 			// 1st step of validation process
@@ -297,19 +334,22 @@ func (v *UIValidator) Validate(groupName string) error {
 				return err
 			}
 			// 2nd and 3rd steps of validation process
-			v.runAsync(groupName, entryList, dataList)
+			v.runAsync(group, index, entryList, dataList)
 		}
 	}
 	return nil
 }
 
-func (v *UIValidator) CancelValidate(groupName string) {
+// CancelValidates cancel processes identified
+// by group + index identifiers, if running.
+func (v *UIValidator) CancelValidates(group, index string) {
 	v.Lock()
 	defer v.Unlock()
 
-	v.cancelValidateIfRunning(groupName)
+	v.cancelValidatesIfRunning(group, index)
 }
 
+// CancelAll cancel all pending processes if running.
 func (v *UIValidator) CancelAll() {
 	v.runningContexts.CancelAll()
 }

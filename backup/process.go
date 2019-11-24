@@ -21,8 +21,8 @@ var (
 	SingleSplitLogLine string = strings.Repeat("-", 100)
 )
 
-// Perform 1st stage (plan stage) to measure RSYNC source volume to backup
-// and find optimal traverse path of source directory tree.
+// BuildBackupPlan perform 1st stage (plan stage) to measure RSYNC source volume
+// to backup and find optimal traverse path of source directory tree.
 // Use plan built in 1st stage later in 2nd stage.
 func BuildBackupPlan(ctx context.Context, lg logger.PackageLog, config *Config,
 	modules []Module, notifier Notifier) (*Plan, *Progress, error) {
@@ -46,7 +46,7 @@ func BuildBackupPlan(ctx context.Context, lg logger.PackageLog, config *Config,
 
 	// create specific RSYNC log file (might be activated in
 	// backup session preference for debug purpose)
-	rsyncLog := config.getRsyncSettings()
+	rsyncLog := config.getRsyncLoggingSettings()
 	if rsyncLog.EnableLog {
 		log = core.NewProxyLog(nil, "rsync", 5, "2006-01-02T15:04:05",
 			func(line string) error {
@@ -171,11 +171,13 @@ func estimateNode(ctx context.Context, password *string, module Module, progress
 	return dir, &backupSize2, nil
 }
 
-// Perform whole 2nd stage (backup stage) here, than save and report completion to session logs.
-func (this *Plan) RunBackup(progress *Progress, destPath string, errorHookCall rsync.ErrorHookCall) error {
+// RunBackup perform whole 2nd stage (backup stage) here, then save and
+// report about completion to session logs.
+func (plan *Plan) RunBackup(progress *Progress, destPath string,
+	errorHookCall rsync.ErrorHookCall) error {
 
 	// Execute backup stage
-	err := runBackup(this, progress, destPath, errorHookCall)
+	err := runBackup(plan, progress, destPath, errorHookCall)
 	if err != nil {
 		progress.Log.Error(locale.T(MsgLogBackupStageCriticalError,
 			struct{ Error error }{Error: err}))
@@ -277,7 +279,7 @@ func runBackup(plan *Plan, progress *Progress, destPath string, errorHookCall rs
 		sourceID := GenerateSourceID(node.Module.SourceRsync)
 		prevBackups2 := prevBackups.FilterBySourceID(sourceID)
 		// run specific RSYNC source to backup
-		err := runBackupNode(plan, node, plan.Config,
+		err := runBackupNode(plan, node, /*plan.Config,*/
 			progress, destPath2, errorHookCall, prevBackups2)
 		if err != nil {
 			return err
@@ -324,7 +326,7 @@ func runBackup(plan *Plan, progress *Progress, destPath string, errorHookCall rs
 }
 
 // Perform backup of one source defined in backup session preferences.
-func runBackupNode(plan *Plan, node Node, config *Config, progress *Progress, destRootPath string,
+func runBackupNode(plan *Plan, node Node, progress *Progress, destRootPath string,
 	errorHookCall rsync.ErrorHookCall, prevBackups *PrevBackups) error {
 
 	paths := core.SrcDstPath{
@@ -333,7 +335,7 @@ func runBackupNode(plan *Plan, node Node, config *Config, progress *Progress, de
 	}
 
 	progress.Progress = &core.SizeProgress{}
-	err := backupDir(node.RootDir, &node.Module, config,
+	err := backupDir(node.RootDir, &node.Module,
 		plan, progress, paths, errorHookCall, prevBackups.GetDirPaths())
 	return err
 }
@@ -410,10 +412,8 @@ func reportProgress(sessionErr, retryErr error, size core.FolderSize,
 }
 
 // Major function to make all necessary RSYNC calls to execute backup process step by step.
-func backupDir(dir *core.Dir, module *Module, config *Config,
-	plan *Plan, progress *Progress,
-	paths core.SrcDstPath, errorHookCall rsync.ErrorHookCall,
-	prevBackupPaths []string) error {
+func backupDir(dir *core.Dir, module *Module, plan *Plan, progress *Progress,
+	paths core.SrcDstPath, errorHookCall rsync.ErrorHookCall, prevBackupPaths []string) error {
 
 	var err error
 	var backupType core.FolderBackupType
@@ -432,12 +432,11 @@ func backupDir(dir *core.Dir, module *Module, config *Config,
 		}
 		// run backup in "skip mode"
 		options := rsync.NewOptions(rsync.WithDefaultParams(
-			module.GetRsyncParams(plan.Config.GetRsyncParams(defParams)))).
-			AddParams("--delete", "--dirs").
+			GetRsyncParams(plan.Config, module, defParams))).AddParams("--delete", "--dirs").
 			// AddParams("--super").
 			// AddParams("--fake-super").
-			AddParams(f("--include=%s", config.SigFileIgnoreBackup), "--exclude=*").
-			SetRetryCount(config.RsyncRetryCount).
+			AddParams(f("--include=%s", plan.Config.SigFileIgnoreBackup), "--exclude=*").
+			SetRetryCount(plan.Config.RsyncRetryCount).
 			SetAuthPassword(module.AuthPassword).
 			// minimum size for empty signature file
 			SetErrorHook(rsync.NewErrorHook(errorHookCall, core.NewFolderSize(1*core.KB)))
@@ -461,11 +460,10 @@ func backupDir(dir *core.Dir, module *Module, config *Config,
 		}
 		// run full backup including content with recursion
 		options := rsync.NewOptions(rsync.WithDefaultParams(
-			module.GetRsyncParams(plan.Config.GetRsyncParams(defParams)))).
-			AddParams("--delete", "--recursive").
+			GetRsyncParams(plan.Config, module, defParams))).AddParams("--delete", "--recursive").
 			// AddParams("--super").
 			// AddParams("--fake-super").
-			SetRetryCount(config.RsyncRetryCount).
+			SetRetryCount(plan.Config.RsyncRetryCount).
 			SetAuthPassword(module.AuthPassword).
 			SetErrorHook(rsync.NewErrorHook(errorHookCall, *dir.Metrics.FullSize))
 
@@ -495,11 +493,10 @@ func backupDir(dir *core.Dir, module *Module, config *Config,
 		}
 		// run backup only folder content without nested folders (flat mode)
 		options := rsync.NewOptions(rsync.WithDefaultParams(
-			module.GetRsyncParams(plan.Config.GetRsyncParams(defParams)))).
-			AddParams("--delete", "--dirs").
+			GetRsyncParams(plan.Config, module, defParams))).AddParams("--delete", "--dirs").
 			// AddParams("--super").
 			// AddParams("--fake-super").
-			SetRetryCount(config.RsyncRetryCount).
+			SetRetryCount(plan.Config.RsyncRetryCount).
 			SetAuthPassword(module.AuthPassword).
 			SetErrorHook(rsync.NewErrorHook(errorHookCall, *dir.Metrics.Size))
 
@@ -527,7 +524,7 @@ func backupDir(dir *core.Dir, module *Module, config *Config,
 			for i, path := range prevBackupPaths2 {
 				prevBackupPaths2[i] = filepath.Join(path, item.Name)
 			}
-			err = backupDir(item, module, config,
+			err = backupDir(item, module,
 				plan, progress, paths.Join(item.Name), errorHookCall, prevBackupPaths2)
 			if err != nil {
 				return err

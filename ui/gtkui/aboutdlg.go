@@ -205,6 +205,21 @@ func buildCommentBlock() (*bytes.Buffer, error) {
 	buf.WriteString(fmt.Sprintln(fmt.Sprintf("%s.",
 		locale.T(MsgRsyncInfo, struct{ RSYNCDetectedVer, RSYNCDetectedProtocol string }{
 			RSYNCDetectedVer: version, RSYNCDetectedProtocol: protocol}))))
+
+	/*
+		display, err := gdk.DisplayGetDefault()
+		if err != nil {
+			return nil, err
+		}
+		if gdk.IsWaylandDisplay(display) {
+			buf.WriteString("WAYLAND display detected.")
+			buf.WriteString(fmt.Sprintln())
+		} else if gdk.IsX11Display(display) {
+			buf.WriteString("X11 display detected.")
+			buf.WriteString(fmt.Sprintln())
+		}
+	*/
+
 	buf.WriteString(fmt.Sprintln(fmt.Sprintf("%s.",
 		locale.T(MsgGolangInfo, struct{ GolangVersion, AppArchitecture string }{
 			GolangVersion:   core.GetGolangVersion(),
@@ -222,7 +237,7 @@ func buildCommentBlock() (*bytes.Buffer, error) {
 }
 
 // CreateAboutDialog creates about dialog object.
-func CreateAboutDialog(appSettings *glib.Settings) (*gtk.AboutDialog, error) {
+func CreateAboutDialog(appSettings *SettingsStore) (*gtk.AboutDialog, error) {
 	dlg, err := gtk.AboutDialogNew()
 	if err != nil {
 		return nil, err
@@ -233,13 +248,13 @@ func CreateAboutDialog(appSettings *glib.Settings) (*gtk.AboutDialog, error) {
 	dlg.SetVersion(core.GetAppVersion())
 	dlg.SetCopyright(locale.T(MsgAboutDlgAppCopyright,
 		struct{ AppCreationYears, AppCopyrightAuthor string }{
-			AppCreationYears:   "2017-2018",
+			AppCreationYears:   "2017-2019",
 			AppCopyrightAuthor: "Denis Dyakov <denis.dyakov@gmail.com>"}))
 	dlg.SetAuthors(core.SplitByEOL(locale.T(MsgAboutDlgAppAuthorsBlock, nil)))
 
 	dlg.SetLicense(APP_LICENSE)
 
-	bh := BindingHelperNew(appSettings)
+	bh := appSettings.NewBindingHelper()
 	// Show about dialog on application startup
 	cbAboutInfo, err := gtk.CheckButtonNewWithLabel(locale.T(MsgAboutDlgDoNotShowCaption, nil))
 	if err != nil {

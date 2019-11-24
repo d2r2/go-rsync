@@ -45,11 +45,14 @@ func NewOptions(params []string) *Options {
 	return options
 }
 
+// AddParams add RSYNC command line options.
 func (v *Options) AddParams(params ...string) *Options {
 	v.Params = append(v.Params, params...)
 	return v
 }
 
+// SetRetryCount set retry count for repeated call in case
+// of error return results (exit code <> 0).
 func (v *Options) SetRetryCount(retryCount *int) *Options {
 	if retryCount != nil {
 		if *retryCount >= 0 {
@@ -64,16 +67,26 @@ func (v *Options) SetRetryCount(retryCount *int) *Options {
 	return v
 }
 
+// SetAuthPassword set password to use in RSYNC call to
+// get data from authenticated (password protected) RSYNC module.
+// Read option "secrets file" at https://linux.die.net/man/5/rsyncd.conf,
+// which describe how to protect RSYNC data source with password.
 func (v *Options) SetAuthPassword(password *string) *Options {
 	v.Password = password
 	return v
 }
 
+// SetErrorHook define callback function to run, if RESYNC
+// utility exited with error code <> 0.
+// Such callback might suggest issue source and make recommendation
+// to user via UI to resolve the issue before following retry.
 func (v *Options) SetErrorHook(errorHook *ErrorHook) *Options {
 	v.ErrorHook = errorHook
 	return v
 }
 
+// WithDefaultParams return list of obligatory options
+// for each run of RSYNC utility.
 func WithDefaultParams(params []string) []string {
 	defParams := []string{"--progress", "--verbose"}
 	params2 := append(defParams, params...)

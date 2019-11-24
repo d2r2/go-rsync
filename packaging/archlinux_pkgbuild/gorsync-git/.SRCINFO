@@ -1,6 +1,6 @@
 pkgbase = gorsync-git
-	pkgdesc = GTK+ frontend for RSYNC console utility.
-	pkgver = 0.3.2
+	pkgdesc = GTK+ frontend (backup application) for RSYNC utility.
+	pkgver = 0.3.3
 	pkgrel = 1
 	url = https://github.com/d2r2/go-rsync
 	install = gorsync-git.install
@@ -12,9 +12,9 @@ pkgbase = gorsync-git
 	depends = rsync
 	depends = glib2
 	depends = gtk3
+	depends = libnotify
 	provides = gorsync
 	source = go-rsync::git+https://github.com/d2r2/go-rsync.git
 	md5sums = SKIP
 
 pkgname = gorsync-git
-
