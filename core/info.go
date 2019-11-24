@@ -10,15 +10,6 @@ import (
 	"github.com/davecgh/go-spew/spew"
 )
 
-var (
-	APP_ID                = "org.d2r2.gorsync"
-	SETTINGS_ID           = APP_ID + ".Settings"
-	SETTINGS_PROFILE_ID   = SETTINGS_ID + ".Profile"
-	SETTINGS_PROFILE_PATH = "/org/d2r2/gorsync/profiles/%s/"
-	SETTINGS_SOURCE_ID    = SETTINGS_PROFILE_ID + ".Source"
-	SETTINGS_SOURCE_PATH  = "/org/d2r2/gorsync/profiles/%s/sources/%s/"
-)
-
 // contain version+buildnum
 // initialized with option:
 // -ldflags "-X main.version `head -1 version` -X main.buildnum `date -u +%Y%m%d%H%M%S`"
@@ -27,12 +18,12 @@ var (
 	_version  string
 )
 
-// SetVersion save application version provided via -ldflags CLI parameter.
+// SetVersion save application version provided with compile via -ldflags CLI parameter.
 func SetVersion(version string) {
 	_version = version
 }
 
-// SetVersion save application build number provided via -ldflags CLI parameter.
+// SetBuildNum save application build number provided with compile via -ldflags CLI parameter.
 func SetBuildNum(buildnum string) {
 	_buildnum = buildnum
 }

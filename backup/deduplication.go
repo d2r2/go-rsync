@@ -266,7 +266,7 @@ func CreateMetadataSignatureFile(modules []Module, destPath string) error {
 
 // EncodeSignatures encode NodeSignatures object to self-describing binary format.
 func EncodeSignatures(signs NodeSignatures) (string, error) {
-	b := bytes.Buffer{}
+	var b bytes.Buffer
 	e := gob.NewEncoder(&b)
 	err := e.Encode(signs)
 	if err != nil {

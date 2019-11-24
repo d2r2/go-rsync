@@ -14,7 +14,7 @@
 # If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 
 PROG=$(basename $0)
-VERSION=v0.2
+VERSION=v0.3
 
 # Define default values, if parameters not specified
 RELEASE_TYPE="Release"
@@ -29,7 +29,7 @@ trap "echo $PROG: error encountered: aborted; exit 3" ERR
 ## Define options: trailing colon means has an argument (customize this: 1 of 3)
 
 SHORT_OPTS=b:t:h
-LONG_OPTS=buildtype:,tags:,version,help
+LONG_OPTS=buildtype:,tags:,version,race,help
 
 SHORT_HELP="Usage: ${PROG} [options] arguments
 Options:
@@ -42,6 +42,7 @@ Options:
   -b | --buildtype <build type>       Build type. Release type = ${RELEASE_TYPE}.
   -t | --tags <golang tags>           Build tags.
   -h | --help                         Show this help message.
+  -r | --race                         Investigate application race conditions.
   --version                           Show version information."
 
 # Detect if GNU Enhanced getopt is available
@@ -79,7 +80,8 @@ while [ $# -gt 0 ]; do
     case "$1" in
         -b | --buildtype)   BUILDTYPE="$2"; shift;;
         -t | --tags)        BUILDTAGS="$2"; shift;;
-        -v | --verbose)     VERBOSE=yes;;
+        -v | --verbose)     VERBOSE=true;;
+        -r | --race)        RACE="-race";;
         -h | --help)     if [ -n "$HAS_GNU_ENHANCED_GETOPT" ]
                          then echo "$LONG_HELP";
                          else echo "$SHORT_HELP";
@@ -95,11 +97,11 @@ shopt -s nocasematch
 if [[ "$BUILDTYPE" == "$RELEASE_TYPE" ]]; then
   echo "Release type build in progress..."
   go run data/generate/generate.go && mv ./assets_vfsdata.go ./data
-  go build -v -ldflags="-X main.version=`head -1 version` -X main.buildnum=`date -u +%Y%m%d%H%M%S`" -tags "gorsync_rel $BUILDTAGS" gorsync.go
+  go build -v $RACE -ldflags="-X main.version=`head -1 version` -X main.buildnum=`date -u +%Y%m%d%H%M%S`" -tags "gorsync_rel $BUILDTAGS" gorsync.go
 else
   [[ -z "$BUILDTYPE" ]] || [[ "$BUILDTYPE" == "$DEV_TYPE" ]] || echo "WARNING: unknown build type provided: $BUILDTYPE"
   echo "Development type build in progress..."
-  go build -v -ldflags="-X main.version=`head -1 version` -X main.buildnum=`date -u +%Y%m%d%H%M%S`" -tags "$BUILDTAGS" gorsync.go
+  go build -v $RACE -ldflags="-X main.version=`head -1 version` -X main.buildnum=`date -u +%Y%m%d%H%M%S`" -tags "$BUILDTAGS" gorsync.go
 fi
 shopt -u nocasematch
 

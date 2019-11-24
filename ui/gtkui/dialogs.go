@@ -1,6 +1,8 @@
 package gtkui
 
 import (
+	"bytes"
+
 	"github.com/d2r2/go-rsync/core"
 	"github.com/d2r2/go-rsync/locale"
 	"github.com/d2r2/gotk3/gtk"
@@ -27,27 +29,40 @@ func schemaSettingsErrorDialog(parent *gtk.Window, text string, extraMsg *string
 	return nil
 }
 
-// interruptBackupDialog shows dialog and query for active process termination.
-func interruptBackupDialog(parent *gtk.Window) (bool, error) {
+func removeUndescore(buttonCaption string) string {
+	var buf bytes.Buffer
+	for _, ch := range buttonCaption {
+		if ch == '_' {
+			continue
+		}
+		buf.WriteRune(ch)
+	}
 
+	buttonCaption = buf.String()
+	return buttonCaption
+}
+
+func createInterruptBackupDialog(parent *gtk.Window) (*MessageDialog, error) {
 	title := locale.T(MsgAppWindowTerminateBackupDlgTitle, nil)
 	titleMarkup := NewMarkup(MARKUP_SIZE_LARGER, 0, 0, nil, nil,
 		NewMarkup(MARKUP_SIZE_LARGER, 0, 0, title, nil))
-	terminateButtonCaption := locale.T(MsgAppWindowTerminateBackupDlgTerminateButton, nil)
-	terminateButtonMarkup := NewMarkup(MARKUP_SIZE_LARGER, 0, 0, terminateButtonCaption, nil)
-	continueButtonCaption := locale.T(MsgAppWindowTerminateBackupDlgContinueButton, nil)
-	continueButtonMarkup := NewMarkup(MARKUP_SIZE_LARGER, 0, 0, continueButtonCaption, nil)
+	terminateButtonCaption1 := locale.T(MsgDialogYesButton, nil)
+	terminateButtonMarkup1 := NewMarkup(MARKUP_SIZE_LARGER, 0, 0,
+		removeUndescore(terminateButtonCaption1), nil)
+	continueButtonCaption1 := locale.T(MsgDialogNoButton, nil)
+	continueButtonMarkup1 := NewMarkup(MARKUP_SIZE_LARGER, 0, 0,
+		removeUndescore(continueButtonCaption1), nil)
 	escapeKeyMarkup := NewMarkup(MARKUP_SIZE_LARGER, 0, 0, nil, nil,
 		NewMarkup(MARKUP_SIZE_LARGER, 0, 0, "esc", nil))
 	text := locale.T(MsgAppWindowTerminateBackupDlgText,
 		struct{ TerminateButton, ContinueButton, EscapeKey string }{
-			TerminateButton: terminateButtonMarkup.String(),
-			ContinueButton:  continueButtonMarkup.String(),
+			TerminateButton: terminateButtonMarkup1.String(),
+			ContinueButton:  continueButtonMarkup1.String(),
 			EscapeKey:       escapeKeyMarkup.String()})
 	// textMarkup := NewMarkup(0, 0, 0, text, nil)
 
 	buttons := []DialogButton{
-		{terminateButtonCaption, gtk.RESPONSE_YES, false, func(btn *gtk.Button) error {
+		{terminateButtonCaption1, gtk.RESPONSE_YES, false, func(btn *gtk.Button) error {
 			style, err2 := btn.GetStyleContext()
 			if err2 != nil {
 				return err2
@@ -56,7 +71,7 @@ func interruptBackupDialog(parent *gtk.Window) (bool, error) {
 			style.AddClass("destructive-action")
 			return nil
 		}},
-		{continueButtonCaption, gtk.RESPONSE_NO, true, func(btn *gtk.Button) error {
+		{continueButtonCaption1, gtk.RESPONSE_NO, true, func(btn *gtk.Button) error {
 			style, err2 := btn.GetStyleContext()
 			if err2 != nil {
 				return err2
@@ -66,11 +81,19 @@ func interruptBackupDialog(parent *gtk.Window) (bool, error) {
 			return nil
 		}},
 	}
-	response, err := RunMessageDialog(parent, titleMarkup.String(), "",
-		[]*DialogParagraph{NewMarkupDialogParagraph(text)}, false, buttons, nil)
+	dialog, err := SetupMessageDialog(parent, titleMarkup.String(), "",
+		[]*DialogParagraph{NewDialogParagraph(text).SetMarkup(true)}, buttons, nil)
+	return dialog, err
+}
+
+// interruptBackupDialog shows dialog and query for active process termination.
+func interruptBackupDialog(parent *gtk.Window) (bool, error) {
+	dialog, err := createInterruptBackupDialog(parent)
 	if err != nil {
 		return false, err
 	}
+
+	response := dialog.Run(false)
 	PrintDialogResponse(response)
 	return IsResponseYes(response), nil
 }
@@ -88,17 +111,20 @@ const (
 	OutOfSpaceTerminate
 )
 
-// outOfSpaceDialog show dialog once RSYNC out of space issue happens.
-func outOfSpaceDialog(parent *gtk.Window, paths core.SrcDstPath, freeSpace uint64) (OutOfSpaceResponse, error) {
+// outOfSpaceDialogAsync show dialog once RSYNC out of space issue happens.
+func outOfSpaceDialogAsync(parent *gtk.Window, paths core.SrcDstPath, freeSpace uint64) (OutOfSpaceResponse, error) {
 	title := locale.T(MsgAppWindowOutOfSpaceDlgTitle, nil)
 	titleMarkup := NewMarkup(MARKUP_SIZE_LARGER, 0, 0, nil, nil,
 		NewMarkup(MARKUP_SIZE_LARGER, 0, 0, title, nil))
 	terminateButtonCaption := locale.T(MsgAppWindowOutOfSpaceDlgTerminateButton, nil)
-	terminateButtonMarkup := NewMarkup(MARKUP_SIZE_LARGER, 0, 0, terminateButtonCaption, nil)
+	terminateButtonMarkup := NewMarkup(MARKUP_SIZE_LARGER, 0, 0,
+		removeUndescore(terminateButtonCaption), nil)
 	ignoreButtonCaption := locale.T(MsgAppWindowOutOfSpaceDlgIgnoreButton, nil)
-	ignoreButtonMarkup := NewMarkup(MARKUP_SIZE_LARGER, 0, 0, ignoreButtonCaption, nil)
+	ignoreButtonMarkup := NewMarkup(MARKUP_SIZE_LARGER, 0, 0,
+		removeUndescore(ignoreButtonCaption), nil)
 	retryButtonCaption := locale.T(MsgAppWindowOutOfSpaceDlgRetryButton, nil)
-	retryButtonMarkup := NewMarkup(MARKUP_SIZE_LARGER, 0, 0, retryButtonCaption, nil)
+	retryButtonMarkup := NewMarkup(MARKUP_SIZE_LARGER, 0, 0,
+		removeUndescore(retryButtonCaption), nil)
 	escapeKeyMarkup := NewMarkup(MARKUP_SIZE_LARGER, 0, 0, nil, nil,
 		NewMarkup(MARKUP_SIZE_LARGER, 0, 0, "esc", nil))
 	buttons := []DialogButton{
@@ -130,12 +156,20 @@ func outOfSpaceDialog(parent *gtk.Window, paths core.SrcDstPath, freeSpace uint6
 		struct{ EscapeKey, RetryButton, IgnoreButton, TerminateButton string }{EscapeKey: escapeKeyMarkup.String(),
 			RetryButton: retryButtonMarkup.String(), IgnoreButton: ignoreButtonMarkup.String(),
 			TerminateButton: terminateButtonMarkup.String()})
-	paragraphs = append(paragraphs, NewMarkupDialogParagraph(text).SetHorizAlign(gtk.ALIGN_CENTER))
+	paragraphs = append(paragraphs, NewDialogParagraph(text).SetMarkup(true).SetHorizAlign(gtk.ALIGN_CENTER))
 
-	response, err2 := RunMessageDialog(parent, titleMarkup.String(), "", paragraphs, false, buttons, nil)
-	if err2 != nil {
-		return 0, err2
-	}
+	ch := make(chan gtk.ResponseType)
+	defer close(ch)
+
+	MustIdleAdd(func() {
+		dialog, err2 := SetupMessageDialog(parent, titleMarkup.String(), "", paragraphs, buttons, nil)
+		if err2 != nil {
+			lg.Fatal(err2)
+		}
+		ch <- dialog.Run(false)
+	})
+
+	response, _ := <-ch
 	PrintDialogResponse(response)
 
 	if IsResponseYes(response) {
@@ -178,9 +212,10 @@ func questionDialog(parent *gtk.Window, titleMarkup string, textMarkup string,
 			return nil
 		}},
 	}
+	dialog, err := SetupMessageDialog(parent, titleMarkup, "",
+		[]*DialogParagraph{NewDialogParagraph(textMarkup).SetMarkup(true)}, buttons, nil)
 	for {
-		response, err := RunMessageDialog(parent, titleMarkup, "",
-			[]*DialogParagraph{NewMarkupDialogParagraph(textMarkup)}, false, buttons, nil)
+		response := dialog.Run(false)
 		if err != nil {
 			return false, err
 		}

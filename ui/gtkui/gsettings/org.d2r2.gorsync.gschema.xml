@@ -95,11 +95,6 @@
       <summary>Enable RSYNC intensive log level log (include stdout output)</summary>
     </key>
 
-    <key name="rsync-compress-file-transfer" type="b">
-      <default>false</default>
-      <summary>RSYNC --compress option. Look for RSYNC help for details</summary>
-    </key>
-
     <key name="rsync-recreate-symlinks" type="b">
       <default>true</default>
       <summary>RSYNC --links option. Look for RSYNC help for details</summary>
@@ -128,6 +123,11 @@
     <key name="rsync-transfer-special-files" type="b">
       <default>false</default>
       <summary>RSYNC --specials option. Look for RSYNC help for details</summary>
+    </key>
+
+    <key name="rsync-compress-file-transfer" type="b">
+      <default>false</default>
+      <summary>RSYNC --compress option. Look for RSYNC help for details</summary>
     </key>
 
     <key name="profile-list" type="as">
@@ -163,6 +163,7 @@
       <default>''</default>
     </key>
 
+
     <key name="change-file-permission" type="s">
       <default>''</default>
     </key>
@@ -170,6 +171,68 @@
     <key name="auth-password" type="s">
       <default>''</default>
     </key>
+
+
+    <key name="rsync-recreate-symlinks-inconsistent" type="b">
+      <default>true</default>
+      <summary>RSYNC --links option. Look for RSYNC help for details</summary>
+    </key>
+
+    <key name="rsync-recreate-symlinks" type="b">
+      <default>false</default>
+      <summary>RSYNC --links option. Look for RSYNC help for details</summary>
+    </key>
+
+    <key name="rsync-transfer-source-permissions-inconsistent" type="b">
+      <default>true</default>
+      <summary>RSYNC --perms option. Look for RSYNC help for details</summary>
+    </key>
+
+    <key name="rsync-transfer-source-permissions" type="b">
+      <default>false</default>
+      <summary>RSYNC --perms option. Look for RSYNC help for details</summary>
+    </key>
+
+    <key name="rsync-transfer-source-group-inconsistent" type="b">
+      <default>true</default>
+      <summary>RSYNC --group option. Look for RSYNC help for details</summary>
+    </key>
+
+    <key name="rsync-transfer-source-group" type="b">
+      <default>false</default>
+      <summary>RSYNC --group option. Look for RSYNC help for details</summary>
+    </key>
+
+    <key name="rsync-transfer-source-owner-inconsistent" type="b">
+      <default>true</default>
+      <summary>RSYNC --owner option. Look for RSYNC help for details</summary>
+    </key>
+
+    <key name="rsync-transfer-source-owner" type="b">
+      <default>false</default>
+      <summary>RSYNC --owner option. Look for RSYNC help for details</summary>
+    </key>
+
+    <key name="rsync-transfer-device-files-inconsistent" type="b">
+      <default>true</default>
+      <summary>RSYNC --devices option. Look for RSYNC help for details</summary>
+    </key>
+
+    <key name="rsync-transfer-device-files" type="b">
+      <default>false</default>
+      <summary>RSYNC --devices option. Look for RSYNC help for details</summary>
+    </key>
+
+    <key name="rsync-transfer-special-files-inconsistent" type="b">
+      <default>true</default>
+      <summary>RSYNC --specials option. Look for RSYNC help for details</summary>
+    </key>
+
+    <key name="rsync-transfer-special-files" type="b">
+      <default>false</default>
+      <summary>RSYNC --specials option. Look for RSYNC help for details</summary>
+    </key>
+
 
     <key name="source-dest-block-enabled" type="b">
       <default>true</default>

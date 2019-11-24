@@ -9,25 +9,25 @@ import (
 	"github.com/d2r2/go-rsync/locale"
 )
 
-// RsyncProcessTerminatedError denote a situation with termination pending.
-type RsyncProcessTerminatedError struct {
+// ProcessTerminatedError denote a situation with termination pending.
+type ProcessTerminatedError struct {
 }
 
-func (v *RsyncProcessTerminatedError) Error() string {
+func (v *ProcessTerminatedError) Error() string {
 	return locale.T(MsgRsyncProcessTerminatedError, nil)
 }
 
-func IsRsyncProcessTerminatedError(err error) bool {
+func IsProcessTerminatedError(err error) bool {
 	if err != nil {
-		_, ok := err.(*RsyncProcessTerminatedError)
+		_, ok := err.(*ProcessTerminatedError)
 		return ok
 	}
 	return false
 }
 
-// RsyncCallFailedError denote a situation when RSYNC execution
+// CallFailedError denote a situation when RSYNC execution
 // completed with non-zero exit code.
-type RsyncCallFailedError struct {
+type CallFailedError struct {
 	ExitCode    int
 	Description string
 }
@@ -50,9 +50,9 @@ func extractError(stdErr *bytes.Buffer) string {
 	return descr
 }
 
-// NewRsyncCallFailedError creates error object based on ExitCode from RSYNC.
+// NewCallFailedError creates error object based on ExitCode from RSYNC.
 // Use STDERR variable to extract more human readable error description.
-func NewRsyncCallFailedError(exitCode int, stdErr *bytes.Buffer) *RsyncCallFailedError {
+func NewCallFailedError(exitCode int, stdErr *bytes.Buffer) *CallFailedError {
 	descr := extractError(stdErr)
 	if descr != "" {
 		descr += ", " + getRsyncExitCodeDesc(exitCode)
@@ -60,14 +60,14 @@ func NewRsyncCallFailedError(exitCode int, stdErr *bytes.Buffer) *RsyncCallFaile
 		descr = getRsyncExitCodeDesc(exitCode)
 	}
 
-	v := &RsyncCallFailedError{
+	v := &CallFailedError{
 		ExitCode:    exitCode,
 		Description: descr,
 	}
 	return v
 }
 
-func (v *RsyncCallFailedError) Error() string {
+func (v *CallFailedError) Error() string {
 	return locale.T(MsgRsyncCallFailedError,
 		struct {
 			Description string
@@ -75,9 +75,9 @@ func (v *RsyncCallFailedError) Error() string {
 		}{Description: v.Description, ExitCode: v.ExitCode})
 }
 
-func IsRsyncCallFailedError(err error) bool {
+func IsCallFailedError(err error) bool {
 	if err != nil {
-		_, ok := err.(*RsyncCallFailedError)
+		_, ok := err.(*CallFailedError)
 		return ok
 	}
 	return false

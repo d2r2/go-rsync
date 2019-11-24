@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/d2r2/go-rsync/backup"
 	"github.com/d2r2/go-rsync/data"
 	"github.com/d2r2/go-rsync/locale"
 	"github.com/d2r2/gotk3/gdk"
@@ -34,6 +35,26 @@ func PixbufFromAssetsNew(assetIconName string) (*gdk.Pixbuf, error) {
 	return pb, nil
 }
 
+func PixbufFromAssetsNewWithResize(assetIconName string,
+	resizeToWidth, resizeToHeight int) (*gdk.Pixbuf, error) {
+
+	file, err := data.Assets.Open(assetIconName)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	b, err := ioutil.ReadAll(file)
+	if err != nil {
+		return nil, err
+	}
+
+	pb, err := getPixbufFromBytesWithResize(b, resizeToWidth, resizeToHeight)
+	if err != nil {
+		return nil, err
+	}
+	return pb, nil
+}
+
 func PixbufAnimationFromAssetsNew(assetIconName string) (*gdk.PixbufAnimation, error) {
 	file, err := data.Assets.Open(assetIconName)
 	if err != nil {
@@ -52,6 +73,26 @@ func PixbufAnimationFromAssetsNew(assetIconName string) (*gdk.PixbufAnimation, e
 	return pb, nil
 }
 
+func PixbufAnimationFromAssetsNewWithResize(assetIconName string,
+	resizeToWidth, resizeToHeight int) (*gdk.PixbufAnimation, error) {
+
+	file, err := data.Assets.Open(assetIconName)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	b, err := ioutil.ReadAll(file)
+	if err != nil {
+		return nil, err
+	}
+
+	pb, err := getPixbufAnimationFromBytesWithResize(b, resizeToWidth, resizeToHeight)
+	if err != nil {
+		return nil, err
+	}
+	return pb, nil
+}
+
 func AnimationImageFromAssetsNew(assetIconName string) (*gtk.Image, error) {
 	pba, err := PixbufAnimationFromAssetsNew(assetIconName)
 	if err != nil {
@@ -64,18 +105,39 @@ func AnimationImageFromAssetsNew(assetIconName string) (*gtk.Image, error) {
 	return img, nil
 }
 
-func ImageFromAssetsNew(assetIconName string, resizeToDestWidth, resizeToDestHeight int) (*gtk.Image, error) {
-	pb, err := PixbufFromAssetsNew(assetIconName)
+func AnimationImageFromAssetsNewWithResize(assetIconName string,
+	resizeToWidth, resizeToHeight int) (*gtk.Image, error) {
+
+	pba, err := PixbufAnimationFromAssetsNewWithResize(assetIconName, resizeToWidth, resizeToHeight)
 	if err != nil {
 		return nil, err
 	}
-	pb2 := pb
-	if resizeToDestWidth >= 0 && resizeToDestHeight >= 0 {
-		pb2, err = pb.ScaleSimple(resizeToDestWidth, resizeToDestHeight, gdk.INTERP_BILINEAR)
-		if err != nil {
-			return nil, err
-		}
+	img, err := gtk.ImageNewFromAnimation(pba)
+	if err != nil {
+		return nil, err
 	}
+	return img, nil
+}
+
+func ImageFromAssetsNew(assetIconName string) (*gtk.Image, error) {
+	pb2, err := PixbufFromAssetsNew(assetIconName)
+	if err != nil {
+		return nil, err
+	}
+
+	img, err := gtk.ImageNewFromPixbuf(pb2)
+	if err != nil {
+		return nil, err
+	}
+	return img, nil
+}
+
+func ImageFromAssetsNewWithResize(assetIconName string, resizeToWidth, resizeToHeight int) (*gtk.Image, error) {
+	pb2, err := PixbufFromAssetsNewWithResize(assetIconName, resizeToWidth, resizeToHeight)
+	if err != nil {
+		return nil, err
+	}
+
 	img, err := gtk.ImageNewFromPixbuf(pb2)
 	if err != nil {
 		return nil, err
@@ -162,22 +224,16 @@ func (v *ProgressBarManage) StartPulse() {
 			for {
 				select {
 				case <-v.pulse.C:
-					_, err := glib.IdleAdd(func() {
+					MustIdleAdd(func() {
 						v.progressBar.Pulse()
 					})
-					if err != nil {
-						lg.Fatal(err)
-					}
 				case <-stopPulse:
 					v.Lock()
 					v.pulse.Stop()
 					v.Unlock()
-					_, err := glib.IdleAdd(func() {
+					MustIdleAdd(func() {
 						v.progressBar.SetFraction(0)
 					})
-					if err != nil {
-						lg.Fatal(err)
-					}
 					return
 				}
 			}
@@ -200,13 +256,126 @@ func (v *ProgressBarManage) SetFraction(value float64) error {
 	v.Lock()
 	defer v.Unlock()
 
-	_, err := glib.IdleAdd(func() {
+	MustIdleAdd(func() {
 		v.progressBar.SetFraction(value)
 	})
-	if err != nil {
-		return err
-	}
 	return nil
+}
+
+func (v *ProgressBarManage) AddProgressBarStyleClass(cssClass string) error {
+	v.Lock()
+	defer v.Unlock()
+
+	MustIdleAdd(func() {
+		err := AddStyleClass(&v.progressBar.Widget, cssClass)
+		if err != nil {
+			lg.Fatal(err)
+		}
+	})
+	return nil
+}
+
+func (v *ProgressBarManage) RemoveProgressBarStyleClass(cssClass string) error {
+	v.Lock()
+	defer v.Unlock()
+
+	MustIdleAdd(func() {
+		err := RemoveStyleClass(&v.progressBar.Widget, cssClass)
+		if err != nil {
+			lg.Fatal(err)
+		}
+	})
+	return nil
+}
+
+// ControlWithStatus wraps control to the box to attach extra status widget to the right.
+// Status widget would be a error icon either spin control to show active process.
+type ControlWithStatus struct {
+	box       *gtk.Box
+	control   *gtk.Widget
+	statusBox *gtk.Box
+}
+
+func NewControlWithStatus(control *gtk.Widget) (*ControlWithStatus, error) {
+	box, err := gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 6)
+	if err != nil {
+		return nil, err
+	}
+	box.Add(control)
+	box.SetHExpand(true)
+	v := &ControlWithStatus{box: box, control: control}
+	return v, nil
+}
+
+func (v *ControlWithStatus) ReplaceStatus(statusBox *gtk.Box) {
+	if v.statusBox != nil {
+		v.statusBox.Destroy()
+		v.statusBox = nil
+	}
+	if statusBox != nil {
+		v.statusBox = statusBox
+		v.box.Add(statusBox)
+		v.box.ShowAll()
+	}
+}
+
+func (v *ControlWithStatus) GetBox() *gtk.Box {
+	return v.box
+}
+
+type GLibIdleCallStub struct {
+	sync.Mutex
+}
+
+var glibIdleCallStub GLibIdleCallStub
+
+var IdleAdd = func(f interface{}, args ...interface{}) (glib.SourceHandle, error) {
+	// glibIdleCallStub.Lock()
+	// defer glibIdleCallStub.Unlock()
+	return glib.IdleAdd(f, args...)
+}
+
+var MustIdleAdd = func(f interface{}, args ...interface{}) {
+	// glibIdleCallStub.Lock()
+	// defer glibIdleCallStub.Unlock()
+	_, err := glib.IdleAdd(f, args...)
+	if err != nil {
+		lg.Fatalf("error creating call glib.IdleAdd: %v", err)
+	}
+}
+
+/*
+var MustIdleAddWait = func(call func()) {
+	glibIdleCallStub.Lock()
+	defer glibIdleCallStub.Unlock()
+
+	ch := make(chan struct{})
+	_, err := glib.IdleAdd(func() {
+		call()
+		close(ch)
+	})
+	if err != nil {
+		lg.Fatalf("error creating call glib.IdleAdd: %v", err)
+	}
+	<-ch
+}
+*/
+
+// GetBaseApplicationCSS read from assets CSS file, which
+// give UI styles used for customization of application interface.
+func GetBaseApplicationCSS() (string, error) {
+	// Load CSS styles
+	file, err := data.Assets.Open("base.css")
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+	b, err := ioutil.ReadAll(file)
+	if err != nil {
+		return "", err
+	}
+	buf := bytes.NewBuffer(b)
+	return buf.String(), nil
 }
 
 func normalizeSubpath(subpath string) string {
@@ -264,6 +433,20 @@ func isDestPathError(destPath string, formatMultiline bool) (bool, string) {
 				msg = buf.String()
 			} else {
 				msg = err.Error()
+			}
+			return true, msg
+		}
+	}
+	return false, ""
+}
+
+func isModulesConfigError(modules []backup.Module, formatMultiline bool) (bool, string) {
+	for _, module := range modules {
+		// check for empty RSYNC source path
+		if module.SourceRsync == "" {
+			msg := locale.T(MsgAppWindowRsyncPathIsEmptyError, nil)
+			if !formatMultiline {
+				msg = strings.ReplaceAll(msg, "\n", " ")
 			}
 			return true, msg
 		}

@@ -15,7 +15,7 @@ type SrcDstPath struct {
 }
 
 // Join fork SrcDstPath with new variant, where
-// new "folder" amended to the end of the path.
+// new "folder" appended to the end of the path.
 func (v SrcDstPath) Join(item string) SrcDstPath {
 	newPathTwin := SrcDstPath{
 		RsyncSourcePath: RsyncPathJoin(v.RsyncSourcePath, item),
@@ -30,7 +30,7 @@ func RsyncPathJoin(elements ...string) string {
 	var buf bytes.Buffer
 	for _, item := range elements {
 		buf.WriteString(item)
-		if buf.Bytes()[buf.Len()-1] != separator {
+		if buf.Len() > 0 && buf.Bytes()[buf.Len()-1] != separator {
 			buf.WriteByte(separator)
 		}
 	}

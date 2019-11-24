@@ -60,11 +60,16 @@ const (
 	MsgPrefDlgChangeFilePermissionCaption = "PrefDlgChangeFilePermissionCaption"
 	MsgPrefDlgChangeFilePermissionHint    = "PrefDlgChangeFilePermissionHint"
 
+	MsgPrefDlgOverrideRsyncTransferOptionsBoxCaption = "PrefDlgOverrideRsyncTransferOptionsBoxCaption"
+	MsgPrefDlgOverrideRsyncTransferOptionsBoxHint    = "PrefDlgOverrideRsyncTransferOptionsBoxHint"
+
 	MsgPrefDlgEnableBackupBlockCaption = "PrefDlgEnableBackupBlockCaption"
 	MsgPrefDlgEnableBackupBlockHint    = "PrefDlgEnableBackupBlockHint"
 
-	MsgPrefDlgDeleteBackupBlockCaption = "PrefDlgDeleteBackupBlockCaption"
-	MsgPrefDlgDeleteBackupBlockHint    = "PrefDlgDeleteBackupBlockHint"
+	MsgPrefDlgDeleteBackupBlockCaption     = "PrefDlgDeleteBackupBlockCaption"
+	MsgPrefDlgDeleteBackupBlockHint        = "PrefDlgDeleteBackupBlockHint"
+	MsgPrefDlgDeleteBackupBlockDialogTitle = "PrefDlgDeleteBackupBlockDialogTitle"
+	MsgPrefDlgDeleteBackupBlockDialogText  = "PrefDlgDeleteBackupBlockDialogText"
 
 	MsgPrefDlgProfileNameCaption       = "PrefDlgProfileNameCaption"
 	MsgPrefDlgProfileNameHint          = "PrefDlgProfileNameHint"
@@ -164,6 +169,7 @@ const (
 	MsgAppWindowInquiringProfileStatus              = "AppWindowInquiringProfileStatus"
 	MsgAppWindowNoneProfileEntry                    = "AppWindowNoneProfileEntry"
 
+	MsgAppWindowRsyncPathIsEmptyError      = "AppWindowRsyncPathIsEmptyError"
 	MsgAppWindowDestPathCaption            = "AppWindowDestPathCaption"
 	MsgAppWindowDestPathHint               = "AppWindowDestPathHint"
 	MsgAppWindowDestPathIsValidStatusPart1 = "AppWindowDestPathIsValidStatusPart1"
@@ -189,10 +195,8 @@ const (
 	MsgAppWindowSessionLogCaption                        = "AppWindowSessionLogCaption"
 	MsgAppWindowCannotStartBackupProcessTitle            = "AppWindowCannotStartBackupProcessTitle"
 
-	MsgAppWindowTerminateBackupDlgTitle           = "AppWindowTerminateBackupDlgTitle"
-	MsgAppWindowTerminateBackupDlgText            = "AppWindowTerminateBackupDlgText"
-	MsgAppWindowTerminateBackupDlgTerminateButton = "AppWindowTerminateBackupDlgTerminateButton"
-	MsgAppWindowTerminateBackupDlgContinueButton  = "AppWindowTerminateBackupDlgContinueButton"
+	MsgAppWindowTerminateBackupDlgTitle = "AppWindowTerminateBackupDlgTitle"
+	MsgAppWindowTerminateBackupDlgText  = "AppWindowTerminateBackupDlgText"
 
 	MsgAppWindowOutOfSpaceDlgTitle           = "AppWindowOutOfSpaceDlgTitle"
 	MsgAppWindowOutOfSpaceDlgText1           = "AppWindowOutOfSpaceDlgText1"
