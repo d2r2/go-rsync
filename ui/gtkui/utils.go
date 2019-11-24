@@ -446,7 +446,9 @@ func isModulesConfigError(modules []backup.Module, formatMultiline bool) (bool, 
 		if module.SourceRsync == "" {
 			msg := locale.T(MsgAppWindowRsyncPathIsEmptyError, nil)
 			if !formatMultiline {
-				msg = strings.ReplaceAll(msg, "\n", " ")
+				// Do not use strings.ReplaceAll() since it was implemented
+				// only in Go 1.12. Instead use strings.Replace().
+				msg = strings.Replace(msg, "\n", " ", -1)
 			}
 			return true, msg
 		}
