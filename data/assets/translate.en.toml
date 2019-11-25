@@ -472,7 +472,7 @@ other = "Destination path is empty. First select destination folder for backup."
 other = "Folder \"{{.FolderPath}}\" does not exist or permission denied."
 
 [AppWindowDestPathIsNotExistAdvise]
-other = "Perhaps, you need to attach destination USB-disk or flash drive, and re-select backup profile again."
+other = "Perhaps, you need to attach destination USB-disk or flash drive, and re-select backup profile."
 
 [AppWindowBackupProgressStartMessage]
 other = "Start backup process..."

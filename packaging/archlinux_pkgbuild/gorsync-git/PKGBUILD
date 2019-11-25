@@ -50,12 +50,13 @@ build() {
     # export GOPATH="${srcdir}/.go"
     mv "${srcdir}/${_pkgname}" "${srcdir}/.go/src/github.com/d2r2/"
     cd "${srcdir}/.go/src/github.com/d2r2/${_pkgname}/"
-    # download and build main package and all dependencies
-    # retrying n times, due to issue with go get functionality
+    # Download and build main package and all dependencies
+    # retrying n times, due to issue(?) with go get functionality.
+    # Probably the cycle should be eliminated in next releases.
     n=0
-    until [ $n -ge 7 ]
+    until [ $n -ge 1 ]
     do
-        GOPATH="${srcdir}/.go" go get -v all && \
+        GOPATH="${srcdir}/.go" go get -v -u ./... && \
             GOPATH="${srcdir}/.go" ./gorsync_build.sh --buildtype Release && \
             break  # substitute your command here
         n=$[$n+1]
