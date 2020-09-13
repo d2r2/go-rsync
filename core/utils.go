@@ -1,3 +1,14 @@
+//--------------------------------------------------------------------------------------------------
+// This file is a part of Gorsync Backup project (backup RSYNC frontend).
+// Copyright (c) 2017-2020 Denis Dyakov <denis.dyakov@gmail.com>
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+// BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//--------------------------------------------------------------------------------------------------
+
 package core
 
 import (
@@ -28,7 +39,7 @@ func DivMod(numerator, denominator int64) (quotient, remainder int64) {
 
 // SplitByEOL normalize "end-of-line" identifiers.
 func SplitByEOL(text string) []string {
-	return strings.Split(strings.Replace(text, "\r\n", "\n", 0), "\n")
+	return strings.Split(strings.Replace(text, "\r\n", "\n", -1), "\n")
 }
 
 // RunExecutableWithExtraVars execute external process returning exit code either any

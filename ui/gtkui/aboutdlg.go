@@ -1,3 +1,14 @@
+//--------------------------------------------------------------------------------------------------
+// This file is a part of Gorsync Backup project (backup RSYNC frontend).
+// Copyright (c) 2017-2020 Denis Dyakov <denis.dyakov@gmail.com>
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+// BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//--------------------------------------------------------------------------------------------------
+
 package gtkui
 
 import (
@@ -184,7 +195,12 @@ Library.`
 func buildCommentBlock() (*bytes.Buffer, error) {
 	version, protocol, err := rsync.GetRsyncVersion()
 	if err != nil {
-		return nil, err
+		if rsync.IsExtractVersionAndProtocolError(err) {
+			version = "?"
+			protocol = version
+		} else {
+			return nil, err
+		}
 	}
 
 	var buf bytes.Buffer
@@ -205,6 +221,7 @@ func buildCommentBlock() (*bytes.Buffer, error) {
 	buf.WriteString(fmt.Sprintln(fmt.Sprintf("%s.",
 		locale.T(MsgRsyncInfo, struct{ RSYNCDetectedVer, RSYNCDetectedProtocol string }{
 			RSYNCDetectedVer: version, RSYNCDetectedProtocol: protocol}))))
+	//buf.WriteString("<a href=\"https://maps.google.com/maps?q=62.1891,+-141.5372+(Example+text+in+here+will+be+rendered+in+the+maps+label)&amp;iwloc=A&amp;hl=en\" title=\"Map\">Click here for Map</a>")
 
 	/*
 		display, err := gdk.DisplayGetDefault()
@@ -248,7 +265,7 @@ func CreateAboutDialog(appSettings *SettingsStore) (*gtk.AboutDialog, error) {
 	dlg.SetVersion(core.GetAppVersion())
 	dlg.SetCopyright(locale.T(MsgAboutDlgAppCopyright,
 		struct{ AppCreationYears, AppCopyrightAuthor string }{
-			AppCreationYears:   "2017-2019",
+			AppCreationYears:   "2017-2020",
 			AppCopyrightAuthor: "Denis Dyakov <denis.dyakov@gmail.com>"}))
 	dlg.SetAuthors(core.SplitByEOL(locale.T(MsgAboutDlgAppAuthorsBlock, nil)))
 
@@ -276,6 +293,9 @@ func CreateAboutDialog(appSettings *SettingsStore) (*gtk.AboutDialog, error) {
 	dlg.SetComments(buf.String())
 
 	dlg.SetWebsite("https://gorsync.github.io/")
+	dlg.SetWebsiteLabel(locale.T(MsgAboutDlgAppLearnMore,
+		struct{ AppTitle string }{
+			AppTitle: core.GetAppTitle()}))
 
 	return dlg, nil
 }

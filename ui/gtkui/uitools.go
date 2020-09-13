@@ -1,3 +1,14 @@
+//--------------------------------------------------------------------------------------------------
+// This file is a part of Gorsync Backup project (backup RSYNC frontend).
+// Copyright (c) 2017-2020 Denis Dyakov <denis.dyakov@gmail.com>
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+// BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//--------------------------------------------------------------------------------------------------
+
 package gtkui
 
 import (
@@ -26,18 +37,6 @@ func SetupLabelJustifyRight(caption string) (*gtk.Label, error) {
 	return lbl, nil
 }
 
-// SetupLabelMarkupJustifyRight create GtkLabel with justification to the right by default.
-func SetupLabelMarkupJustifyRight(caption *Markup) (*gtk.Label, error) {
-	lbl, err := gtk.LabelNew(caption.String())
-	if err != nil {
-		return nil, err
-	}
-	lbl.SetUseMarkup(true)
-	lbl.SetHAlign(gtk.ALIGN_END)
-	lbl.SetJustify(gtk.JUSTIFY_RIGHT)
-	return lbl, nil
-}
-
 // SetupLabelJustifyLeft create GtkLabel with justification to the left by default.
 func SetupLabelJustifyLeft(caption string) (*gtk.Label, error) {
 	lbl, err := gtk.LabelNew(caption)
@@ -49,15 +48,62 @@ func SetupLabelJustifyLeft(caption string) (*gtk.Label, error) {
 	return lbl, nil
 }
 
+// SetupLabelJustifyCenter create GtkLabel with justification to the center by default.
+func SetupLabelJustifyCenter(caption string) (*gtk.Label, error) {
+	lbl, err := gtk.LabelNew(caption)
+	if err != nil {
+		return nil, err
+	}
+	lbl.SetHAlign(gtk.ALIGN_CENTER)
+	lbl.SetJustify(gtk.JUSTIFY_CENTER)
+	return lbl, nil
+}
+
+// SetupLabelMarkupJustifyRight create GtkLabel with justification to the right by default.
+func SetupLabelMarkupJustifyRight(caption *Markup) (*gtk.Label, error) {
+	captionText := ""
+	if caption != nil {
+		captionText = caption.String()
+	}
+	lbl, err := gtk.LabelNew(captionText)
+	if err != nil {
+		return nil, err
+	}
+	lbl.SetUseMarkup(true)
+	lbl.SetHAlign(gtk.ALIGN_END)
+	lbl.SetJustify(gtk.JUSTIFY_RIGHT)
+	return lbl, nil
+}
+
 // SetupLabelMarkupJustifyLeft create GtkLabel with justification to the left by default.
 func SetupLabelMarkupJustifyLeft(caption *Markup) (*gtk.Label, error) {
-	lbl, err := gtk.LabelNew(caption.String())
+	captionText := ""
+	if caption != nil {
+		captionText = caption.String()
+	}
+	lbl, err := gtk.LabelNew(captionText)
 	if err != nil {
 		return nil, err
 	}
 	lbl.SetUseMarkup(true)
 	lbl.SetHAlign(gtk.ALIGN_START)
 	lbl.SetJustify(gtk.JUSTIFY_LEFT)
+	return lbl, nil
+}
+
+// SetupLabelMarkupJustifyCenter create GtkLabel with justification to the center by default.
+func SetupLabelMarkupJustifyCenter(caption *Markup) (*gtk.Label, error) {
+	captionText := ""
+	if caption != nil {
+		captionText = caption.String()
+	}
+	lbl, err := gtk.LabelNew(captionText)
+	if err != nil {
+		return nil, err
+	}
+	lbl.SetUseMarkup(true)
+	lbl.SetHAlign(gtk.ALIGN_CENTER)
+	lbl.SetJustify(gtk.JUSTIFY_CENTER)
 	return lbl, nil
 }
 

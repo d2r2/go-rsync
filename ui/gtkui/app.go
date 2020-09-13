@@ -1,3 +1,14 @@
+//--------------------------------------------------------------------------------------------------
+// This file is a part of Gorsync Backup project (backup RSYNC frontend).
+// Copyright (c) 2017-2020 Denis Dyakov <denis.dyakov@gmail.com>
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+// BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//--------------------------------------------------------------------------------------------------
+
 package gtkui
 
 import (
@@ -78,15 +89,29 @@ func createQuitAction(win *gtk.Window, backupSync *BackupSessionStatus, supplime
 		}
 
 		if quit {
-			application, err := win.GetApplication()
+			app, err := win.GetApplication()
 			if err != nil {
 				lg.Fatal(err)
 			}
 			if backupSync.IsRunning() {
 				backupSync.Stop()
 			}
+			// terminate all supplementary services if running
 			supplimentary.CancelAll()
-			application.Quit()
+			// loop through and close all windows currently opened
+			for {
+				win2 := app.GetActiveWindow()
+				if win2 != nil {
+					win2.Close()
+					for gtk.EventsPending() {
+						gtk.MainIterationDo(true)
+					}
+				} else {
+					break
+				}
+			}
+			// quit application
+			app.Quit()
 		}
 	})
 	if err != nil {
@@ -142,7 +167,8 @@ func createHelpAction(win *gtk.Window) (glib.IAction, error) {
 		lg.Debugf("%v action activated with current state %v and args %v",
 			name, state, param)
 
-		ShowUri(win, "https://gorsync.github.io")
+		// ignore error
+		_ = ShowUri(win, "https://gorsync.github.io")
 	})
 	if err != nil {
 		return nil, err
@@ -193,7 +219,7 @@ func createMenuModelForPopover() (glib.IMenuModel, error) {
 // Action activation require to have GLib Setting Schema
 // preliminary installed, otherwise will not work raising error.
 // Installation bash script from app folder must be performed in advance.
-func createPreferenceAction(win *gtk.Window, profile *gtk.ComboBox) (glib.IAction, error) {
+func createPreferenceAction(mainWin *gtk.ApplicationWindow, profile *gtk.ComboBox) (glib.IAction, error) {
 	act, err := glib.SimpleActionNew("PreferenceAction", nil)
 	if err != nil {
 		return nil, err
@@ -207,7 +233,7 @@ func createPreferenceAction(win *gtk.Window, profile *gtk.ComboBox) (glib.IActio
 		lg.Debugf("%v action activated with current state %v and args %v",
 			name, state, param)
 
-		app, err := win.GetApplication()
+		app, err := mainWin.GetApplication()
 		if err != nil {
 			lg.Fatal(err)
 		}
@@ -229,7 +255,7 @@ func createPreferenceAction(win *gtk.Window, profile *gtk.ComboBox) (glib.IActio
 				})
 			}
 
-			win, err := CreatePreferenceDialog(SETTINGS_SCHEMA_ID, SETTINGS_SCHEMA_PATH, app, changedFunc)
+			win, err := CreatePreferenceDialog(SETTINGS_SCHEMA_ID, SETTINGS_SCHEMA_PATH, mainWin, changedFunc)
 			if err != nil {
 				lg.Fatal(err)
 			}
@@ -277,16 +303,16 @@ func createPreferenceAction(win *gtk.Window, profile *gtk.ComboBox) (glib.IActio
 // enableAction finds GAction by name and enable/disable it.
 func enableAction(win *gtk.ApplicationWindow, actionName string, enable bool) error {
 	act := win.LookupAction(actionName)
-	if act != nil {
-		action, err := glib.SimpleActionFromAction(act)
-		if err != nil {
-			return err
-		}
-		action.SetEnabled(enable)
-	} else {
-		err := errors.New(spew.Sprintf("action %q does not found", actionName))
+	if act == nil {
+		err := errors.New(locale.T(MsgActionDoesNotFound,
+			struct{ ActionName string }{ActionName: actionName}))
 		return err
 	}
+	action, err := glib.SimpleActionFromAction(act)
+	if err != nil {
+		return err
+	}
+	action.SetEnabled(enable)
 	return nil
 }
 
@@ -757,18 +783,13 @@ func getPlanInfoMarkup(plan *backup.Plan) *Markup {
 	return mp
 }
 
-func getSpaceBox() (*gtk.Box, error) {
-	box, err := gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 0)
-	if err != nil {
-		return nil, err
-	}
-	box.SetSizeRequest(3, -1)
-	return box, nil
-}
-
 // createHeader creates GtkHeader widget filled with children controls.
 func createHeader(title, subtitle string, showCloseButton bool) (*gtk.HeaderBar, error) {
 	hdr, err := SetupHeader(title, subtitle, showCloseButton)
+	if err != nil {
+		return nil, err
+	}
+	err = AddStyleClasses(&hdr.Widget, []string{"themed"})
 	if err != nil {
 		return nil, err
 	}
@@ -785,8 +806,6 @@ func createHeader(title, subtitle string, showCloseButton bool) (*gtk.HeaderBar,
 	menuBtn.SetMenuModel(menu)
 	hdr.PackEnd(menuBtn)
 
-	var box *gtk.Box
-
 	btn, err := SetupButtonWithThemedImage("preferences-other-symbolic")
 	if err != nil {
 		return nil, err
@@ -795,23 +814,11 @@ func createHeader(title, subtitle string, showCloseButton bool) (*gtk.HeaderBar,
 	btn.SetTooltipText(locale.T(MsgAppWindowPreferencesHint, nil))
 	hdr.PackStart(btn)
 
-	box, err = getSpaceBox()
-	if err != nil {
-		return nil, err
-	}
-	hdr.PackStart(box)
-
 	div, err := gtk.SeparatorNew(gtk.ORIENTATION_VERTICAL)
 	if err != nil {
 		return nil, err
 	}
 	hdr.PackStart(div)
-
-	box, err = getSpaceBox()
-	if err != nil {
-		return nil, err
-	}
-	hdr.PackStart(box)
 
 	btn, err = SetupButtonWithThemedImage("media-playback-start-symbolic")
 	if err != nil {
@@ -829,12 +836,6 @@ func createHeader(title, subtitle string, showCloseButton bool) (*gtk.HeaderBar,
 	btn.SetTooltipText(locale.T(MsgAppWindowStopBackupHint, nil))
 	hdr.PackStart(btn)
 
-	box, err = getSpaceBox()
-	if err != nil {
-		return nil, err
-	}
-	hdr.PackStart(box)
-
 	return hdr, nil
 }
 
@@ -843,7 +844,10 @@ func createBoxWithThemedIcon(themedIconName string, cssClasses []string) (*gtk.B
 	if err != nil {
 		return nil, err
 	}
-	AddStyleClasses(&img.Widget, cssClasses)
+	err = AddStyleClasses(&img.Widget, cssClasses)
+	if err != nil {
+		return nil, err
+	}
 	img.SetFromIconName(themedIconName, gtk.ICON_SIZE_BUTTON)
 	box, err := gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 0)
 	if err != nil {
@@ -1241,7 +1245,7 @@ func createMainForm(parent context.Context, cancel func(),
 		return nil, err
 	}
 
-	act, err = createPreferenceAction(&win.Window, cbProfile)
+	act, err = createPreferenceAction(win, cbProfile)
 	if err != nil {
 		return nil, err
 	}
@@ -1345,10 +1349,14 @@ func CreateApp() (*gtk.Application, error) {
 		// Run code, when app message queue becomes empty.
 		if !appSettings.settings.GetBoolean(CFG_DONT_SHOW_ABOUT_ON_STARTUP) {
 			MustIdleAdd(func() {
-				action := win.LookupAction("AboutAction")
-				if action != nil {
-					action.Activate(nil)
+				actionName := "AboutAction"
+				action := win.LookupAction(actionName)
+				if action == nil {
+					err := errors.New(locale.T(MsgActionDoesNotFound,
+						struct{ ActionName string }{ActionName: actionName}))
+					lg.Fatal(err)
 				}
+				action.Activate(nil)
 			})
 		}
 

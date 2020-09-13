@@ -1,3 +1,14 @@
+//--------------------------------------------------------------------------------------------------
+// This file is a part of Gorsync Backup project (backup RSYNC frontend).
+// Copyright (c) 2017-2020 Denis Dyakov <denis.dyakov@gmail.com>
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+// BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//--------------------------------------------------------------------------------------------------
+
 package gtkui
 
 import (
@@ -369,21 +380,12 @@ func addColorTags(buffer *gtk.TextBuffer) error {
 	return nil
 }
 
-// // GetSubpathRegexp verify that proposed file system path expression is valid.
-// // Understand path separator for different OS, taking path separator setting from runtime.
-// func getSubpathRegexp() (*regexp.Regexp, error) {
-// 	template := fmt.Sprintf(`"(?P<Path>(\%[1]c?([^\%[1]c]+\%[1]c?)*))"`, os.PathSeparator)
-// 	lg.Debugf("Subpath regex template: %s", template)
-// 	rexp := regexp.MustCompile(template)
-// 	return rexp, nil
-// }
-
 // getRuneIndex finds index of UTF-8 character by character byte offset in line string.
 func getRuneIndex(line string, byteOffset int) int {
 	runeIndex := 0
 	var index int
 	// var runeValue rune
-	for index, _ = range line {
+	for index = range line {
 		// lg.Infof("rune=%v, offset=%d", runeValue, index)
 		if index == byteOffset {
 			return runeIndex
@@ -517,7 +519,10 @@ func (v *NotifierUI) UpdateBackupProgress(progress *float32,
 	call := func() {
 		if progress == nil {
 			v.pbm.StartPulse()
-			v.pbm.AddProgressBarStyleClass("run-animation")
+			err := v.pbm.AddProgressBarStyleClass("run-animation")
+			if err != nil {
+				lg.Fatal(err)
+			}
 		} else {
 			prg := float64(*progress)
 			err := v.pbm.SetFraction(prg)
@@ -525,7 +530,10 @@ func (v *NotifierUI) UpdateBackupProgress(progress *float32,
 				lg.Fatal(err)
 			}
 			if prg == 1 {
-				v.pbm.RemoveProgressBarStyleClass("run-animation")
+				err := v.pbm.RemoveProgressBarStyleClass("run-animation")
+				if err != nil {
+					lg.Fatal(err)
+				}
 			}
 		}
 		v.statusLabel.SetMarkup(progressStr)

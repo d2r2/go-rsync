@@ -1,3 +1,14 @@
+//--------------------------------------------------------------------------------------------------
+// This file is a part of Gorsync Backup project (backup RSYNC frontend).
+// Copyright (c) 2017-2020 Denis Dyakov <denis.dyakov@gmail.com>
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+// BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//--------------------------------------------------------------------------------------------------
+
 package backup
 
 import (
@@ -33,9 +44,14 @@ import (
 //
 // =============================================================================================
 
-const MaxUint = ^uint(0)
-const MaxInt = int(MaxUint >> 1)
-const MinInt = -MaxInt - 1
+const (
+	// MaxUint keep maximum UINT value.
+	MaxUint = ^uint(0)
+	// MaxInt keep maximum poistive INT value.
+	MaxInt = int(MaxUint >> 1)
+	// MinInt keep minimum negative INT value.
+	MinInt = -MaxInt - 1
+)
 
 func markMesuredAll(dir *core.Dir) {
 	dir.Metrics.Measured = true
@@ -73,8 +89,11 @@ func getNonMeasuredDir(dir *core.Dir) *core.Dir {
 }
 
 // measureLocalUpToRoot calculate "local size" metric for chain of parent folders
-// up to root, if not yet defined.
-func measureLocalUpToRoot(ctx context.Context, password *string, dir *core.Dir, retryCount *int, log *rsync.Logging) error {
+// up to root, if not yet defined. Additionally mark all folder's chain up to root
+// with core.FBT_CONTENT attribute.
+func measureLocalUpToRoot(ctx context.Context, password *string, dir *core.Dir, retryCount *int,
+	rsyncProtocol string, log *rsync.Logging) error {
+
 	item := dir
 	for {
 		item = item.Parent
@@ -84,22 +103,27 @@ func measureLocalUpToRoot(ctx context.Context, password *string, dir *core.Dir, 
 		var err error
 		size := item.Metrics.Size
 		if size == nil {
-			size, err = rsync.ObtainDirLocalSize(ctx, password, item, retryCount, log)
+			size, err = rsync.ObtainDirLocalSize(ctx, password, item, retryCount, rsyncProtocol, log)
 			if err != nil {
 				return err
 			}
 		}
 		item.Metrics.Measured = true
+		// Mark up folder as "content backup" type, when during backup stage will be
+		// backed up only files, but not nested folders.
 		item.Metrics.BackupType = core.FBT_CONTENT
 		item.Metrics.Size = size
 	}
 	return nil
 }
 
+// findDownNonMeasuredDirByWeight find children node (folder), which weight metric
+// (weight here - number of all children folders) as close as possible to weight parameter
+// passed to the function.
 func findDownNonMeasuredDirByWeight(dir *core.Dir, weight int) *core.Dir {
-	if !dir.Metrics.Measured && dir.Metrics.ChildrenCount <= weight {
-		return dir
-	} else if !dir.Metrics.Measured && dir.Metrics.ChildrenCount > weight && len(dir.Childs) == 0 {
+	if !dir.Metrics.Measured &&
+		(dir.Metrics.ChildrenCount <= weight ||
+			dir.Metrics.ChildrenCount > weight && len(dir.Childs) == 0) {
 		return dir
 	} else {
 		var found *core.Dir
@@ -117,31 +141,18 @@ func findDownNonMeasuredDirByWeight(dir *core.Dir, weight int) *core.Dir {
 	}
 }
 
-/*
-func findUpNonMeasuredDirByWeight(dir *core.Dir, weight int) *core.Dir {
-	item := dir
-	parent := item.Parent
-	for {
-		if parent == nil || parent.Metrics.Measured {
-			//LocalLog.Debugf("From %v up to %v", dir.Paths.RsyncSourcePath, item.Paths.RsyncSourcePath)
-			return item
-		}
-		if parent.Metrics.ChildrenCount > weight {
-			//LocalLog.Debugf("From %v up to %v", dir.Paths.RsyncSourcePath, item.Paths.RsyncSourcePath)
-			return parent
-		}
-		item = parent
-		parent = item.Parent
-	}
-}
-*/
-
-func MeasureDir(ctx context.Context, password *string, dir *core.Dir, retryCount *int, log *rsync.Logging,
-	blockSize *backupBlockSizeSettings) (int, error) {
+// MeasureDir is a main heuristic function for planing backup process. MeasureDir walks through
+// directory tree taken from dir variable, and find size which match size criteria optimal for splitting
+// backup process to the pieces. As a result folders marked with corresponding type of processing,
+// like core.FBT_RECURSIVE, core.FBT_CONTENT or core.FBT_SKIP, which lately used in backup stage
+// as a direct instruction what to do. Returning totalCount contains statistics how many times
+// application call RSYNC utility to measure folder size on remote server (with all content).
+func MeasureDir(ctx context.Context, password *string, dir *core.Dir, retryCount *int,
+	rsyncProtocol string, log *rsync.Logging, blockSize *backupBlockSizeSettings) (int, error) {
 
 	totalCount := 0
 	for {
-		found, count, err := searchDownOptimalDir(ctx, password, dir, retryCount, log, blockSize)
+		found, count, err := searchDownOptimalDir(ctx, password, dir, retryCount, rsyncProtocol, log, blockSize)
 		if err != nil {
 			return 0, err
 		}
@@ -152,14 +163,17 @@ func MeasureDir(ctx context.Context, password *string, dir *core.Dir, retryCount
 
 		if found.Metrics.IgnoreToBackup {
 			LocalLog.Debugf("Selected for skip (count=%v): %v", count, found.Paths.RsyncSourcePath)
+			// Mark this folder as "skip to backup" (because it contains special signature file).
 			found.Metrics.BackupType = core.FBT_SKIP
 		} else {
 			LocalLog.Debugf("Selected for full backup (count=%v): %v", count, found.Paths.RsyncSourcePath)
+			// Mark this folder as "recursive backup", when this folder and all included content and subfoders
+			// are backing up in single RSYNC call.
 			found.Metrics.BackupType = core.FBT_RECURSIVE
 		}
 
 		markMesuredAll(found)
-		err = measureLocalUpToRoot(ctx, password, found, retryCount, log)
+		err = measureLocalUpToRoot(ctx, password, found, retryCount, rsyncProtocol, log)
 		if err != nil {
 			return 0, err
 		}
@@ -197,11 +211,13 @@ func getRoot(dir *core.Dir) *core.Dir {
 }
 
 // calcFullSizesWithRoot calc "full size" metric for current folder and root, if not defined yet.
-func calcFullSizesWithRoot(ctx context.Context, password *string, dir *core.Dir, retryCount *int, log *rsync.Logging) (int, error) {
+func calcFullSizesWithRoot(ctx context.Context, password *string, dir *core.Dir,
+	retryCount *int, rsyncProtocol string, log *rsync.Logging) (int, error) {
+
 	count := 0
 	root := getRoot(dir)
 	if root.Metrics.FullSize == nil {
-		fullSize, err := rsync.ObtainDirFullSize(ctx, password, root, retryCount, log)
+		fullSize, err := rsync.ObtainDirFullSize(ctx, password, root, retryCount, rsyncProtocol, log)
 		if err != nil {
 			return 0, err
 		}
@@ -209,7 +225,7 @@ func calcFullSizesWithRoot(ctx context.Context, password *string, dir *core.Dir,
 		count++
 	}
 	if dir.Metrics.FullSize == nil {
-		fullSize, err := rsync.ObtainDirFullSize(ctx, password, dir, retryCount, log)
+		fullSize, err := rsync.ObtainDirFullSize(ctx, password, dir, retryCount, rsyncProtocol, log)
 		if err != nil {
 			return 0, err
 		}
@@ -308,9 +324,9 @@ func calcOptimalBackupBlockSize(dir *core.Dir) uint64 {
 }
 
 // searchDownOptimalDir is a main recurrent function to find optimal (or close to optimal)
-// traverse path to backup source minimizing number of RSYNC utility calls.
-func searchDownOptimalDir(ctx context.Context, password *string, dir *core.Dir, retryCount *int, log *rsync.Logging,
-	blockSize *backupBlockSizeSettings) (*core.Dir, int, error) {
+// walk path of backup source directory tree minimizing number of RSYNC utility calls.
+func searchDownOptimalDir(ctx context.Context, password *string, dir *core.Dir, retryCount *int,
+	rsyncProtocol string, log *rsync.Logging, blockSize *backupBlockSizeSettings) (*core.Dir, int, error) {
 
 	LocalLog.Debugf("Start searching optimal folder from root %v",
 		dir.Paths.RsyncSourcePath)
@@ -324,7 +340,7 @@ func searchDownOptimalDir(ctx context.Context, password *string, dir *core.Dir, 
 
 	totalFullSizeCount := 0
 	if found != nil {
-		count, err := calcFullSizesWithRoot(ctx, password, found, retryCount, log)
+		count, err := calcFullSizesWithRoot(ctx, password, found, retryCount, rsyncProtocol, log)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -357,18 +373,22 @@ func searchDownOptimalDir(ctx context.Context, password *string, dir *core.Dir, 
 		// candidate for optimal "block size".
 		if len(sizes) == 1 {
 			root := getRoot(found)
-			next := findDownNonMeasuredDirByWeight(found, root.Metrics.ChildrenCount/2)
+			// employ "bisection method" to select next candidate
+			weight := root.Metrics.ChildrenCount / 2
+			next := findDownNonMeasuredDirByWeight(found, weight)
 			if next == found {
 				return next, totalFullSizeCount, nil
 			} else {
-				count, err := calcFullSizesWithRoot(ctx, password, next, retryCount, log)
+				count, err := calcFullSizesWithRoot(ctx, password, next, retryCount,
+					rsyncProtocol, log)
 				if err != nil {
 					return nil, 0, err
 				}
 				totalFullSizeCount += count
 
 				if next.Metrics.FullSize.GetByteCount() > blockSize.BackupBlockSize {
-					next, count, err = searchDownOptimalDir(ctx, password, next, retryCount, log, blockSize)
+					next, count, err = searchDownOptimalDir(ctx, password, next, retryCount,
+						rsyncProtocol, log, blockSize)
 					if err != nil {
 						return nil, 0, err
 					}
@@ -385,17 +405,19 @@ func searchDownOptimalDir(ctx context.Context, password *string, dir *core.Dir, 
 			LocalLog.Debugf("Found depth %v from [sizes=%v, depths=%v] for size %v",
 				depth, sizes, depths, blockSize.BackupBlockSize)
 
-			LocalLog.Debugf("Get dir by depth %v starting from %q", depth, found.Paths.RsyncSourcePath)
+			LocalLog.Debugf("Get dir by depth %v starting from %q", depth,
+				found.Paths.RsyncSourcePath)
 
 			next := findDownNonMeasuredDirByDepth(found, depth)
-			count, err := calcFullSizesWithRoot(ctx, password, next, retryCount, log)
+			count, err := calcFullSizesWithRoot(ctx, password, next, retryCount, rsyncProtocol, log)
 			if err != nil {
 				return nil, 0, err
 			}
 			totalFullSizeCount += count
 			if next.Metrics.FullSize.GetByteCount() > blockSize.BackupBlockSize && len(next.Childs) > 0 {
 				next = selectChildByWeight(next)
-				next, count, err = searchDownOptimalDir(ctx, password, next, retryCount, log, blockSize)
+				next, count, err = searchDownOptimalDir(ctx, password, next, retryCount, rsyncProtocol,
+					log, blockSize)
 				if err != nil {
 					return nil, 0, err
 				}
@@ -407,210 +429,3 @@ func searchDownOptimalDir(ctx context.Context, password *string, dir *core.Dir, 
 	}
 	return nil, 0, nil
 }
-
-/*
-func MeasureDir2(dir *core.Dir, ctx context.Context, retryCount *int, log *rsync.Logging,
-	mbSize uint64) (int, error) {
-	totalCount := 0
-	for {
-		found, count, err := searchDownOptimalDir2(dir, ctx, retryCount, log, mbSize)
-		if err != nil {
-			return 0, err
-		}
-		totalCount += count
-		if found == nil {
-			break
-		}
-		if found.Metrics.IgnoreToBackup {
-			LocalLog.Debugf("Selected for skip (count=%v): %v", count, found.Paths.RsyncSourcePath)
-		} else {
-			LocalLog.Debugf("Selected for full backup (count=%v): %v", count, found.Paths.RsyncSourcePath)
-		}
-		markMesuredAll(found)
-		err = measureLocalUpToRoot(found, ctx, retryCount, log)
-		if err != nil {
-			return 0, err
-		}
-	}
-	return totalCount, nil
-}
-
-func compareDirVs(dir *core.Dir, ctx context.Context, retryCount *int, log *rsync.Logging,
-	mbSize uint64) (cmp string, x, y int64, count int, err error) {
-
-	mbs := mbSize * 1024 * 1024
-	fullSize := dir.Metrics.FullSize
-	if fullSize == nil {
-		fullSize, err = obtainFullSize(dir, ctx, retryCount, log)
-		if err != nil {
-			return "", 0, 0, 0, err
-		}
-		count = 1
-		LocalLog.Debugf("Get %q full size (weight=%v): %v", dir.Paths.RsyncSourcePath,
-			dir.Metrics.FullCount, humanize.Bytes(fullSize.GetByteCount()))
-		dir.Metrics.FullSize = fullSize
-	}
-	if dir.Metrics.IgnoreToBackup ||
-		fullSize.GetByteCount() == mbs ||
-		fullSize.GetByteCount() > mbs && len(dir.Childs) == 0 {
-		return "=", int64(dir.Metrics.FullCount), int64(fullSize.GetByteCount()), count, nil
-	}
-	if fullSize.GetByteCount() > mbs {
-		return ">", int64(dir.Metrics.FullCount), int64(fullSize.GetByteCount()), count, nil
-	} else {
-		return "<", int64(dir.Metrics.FullCount), int64(fullSize.GetByteCount()), count, nil
-	}
-}
-
-func interpolLinear2(x1, x2, y1, y2, y3 int64) (x3 *int64) {
-	if y2-y1 == 0 {
-		return nil
-	} else {
-		var y float64
-		//if y3 > y1 {
-		y = float64(y3 - y1)
-		//} else {
-		//y = float64(y1 - y3)
-		//}
-		x31 := float64(x2-x1)*y/float64(y2-y1) + float64(x1)
-		x32 := int64(x31)
-		return &x32
-	}
-}
-
-type DirSizeSorted struct {
-	Dirs []*core.Dir
-}
-
-func (v *core.DirSizeSorted) Len() int {
-	return len(v.Dirs)
-}
-
-func (v *core.DirSizeSorted) Swap(i, j int) {
-	v.Dirs[i], v.Dirs[j] = v.Dirs[j], v.Dirs[i]
-}
-
-func (v *core.DirSizeSorted) Less(i, j int) bool {
-	if v.Dirs[i].Metrics.FullSize == v.Dirs[j].Metrics.FullSize {
-		return v.Dirs[i].Metrics.FullCount > v.Dirs[j].Metrics.FullCount
-	} else {
-		return v.Dirs[i].Metrics.FullSize.GetByteCount() >
-			v.Dirs[j].Metrics.FullSize.GetByteCount()
-	}
-}
-
-func (v *core.DirSizeSorted) Add(dir *core.Dir) {
-	v.Dirs = append(v.Dirs, dir)
-}
-
-func (v *core.DirSizeSorted) Clear() {
-	v.Dirs = nil
-}
-
-func (v *core.DirSizeSorted) Count() int {
-	return len(v.Dirs)
-}
-
-func searchDownOptimalDir2(dir *core.Dir, ctx context.Context, retryCount *int, log *rsync.Logging,
-	mbSize uint64) (*core.Dir, int, error) {
-
-	div := 2
-	var moveUp bool
-	//var prevMoveUp bool
-	count := 0
-	found := getNonMeasuredDir(dir)
-	first := true
-	//var lastX, lastY int64
-	//var x, y int64
-	if found != nil {
-		item := found
-		weight := found.Metrics.FullCount
-		//var prev *core.Dir
-		candidates := new(DirSizeSorted)
-		for {
-			//LocalLog.Debugf("Found non measured dir: %v", item.Paths.RsyncSourcePath)
-			var cmp string
-			var err error
-			var cnt int
-			//lastX, lastY = x, y
-			cmp, _, _, //, x, y,
-				cnt, err = compareDirVs(item, ctx, retryCount, log, mbSize)
-			if err != nil {
-				return nil, 0, err
-			}
-			count += cnt
-			if cmp == "=" || cmp == "<" && first {
-				if item.Metrics.IgnoreToBackup {
-					item.Metrics.BackupType = io.FBT_SKIP
-				} else {
-					item.Metrics.BackupType = io.FBT_RECURSIVE
-				}
-				return item, count, nil
-			} else if cmp == ">" {
-				LocalLog.Debugf("Move down from: %v", item.Paths.RsyncSourcePath)
-				//LocalLog.Debugf("Candidate count %v", candidates.Count())
-				if candidates.Count() > 0 {
-					sort.Sort(candidates)
-					selected := candidates.Dirs[0]
-					selected.Metrics.BackupType = io.FBT_RECURSIVE
-					return selected, count, nil
-				}
-				//prevMoveUp = moveUp
-				moveUp = false
-
-				if found.Metrics.FullCount/div > 0 {
-					weight -= found.Metrics.FullCount / div
-				} else {
-					weight--
-				}
-
-				//x := interpolLinear2(x, lastX, y, lastY, int64(mbSize*1024*1024))
-				//if x == nil {
-				//	weight--
-				//} else {
-				//	weight = int(*x)
-				//}
-
-				//LocalLog.Debugf("New weight=%v, interpol=%v", weight, newWeight)
-				//weight = int(newWeight)
-			} else if cmp == "<" {
-
-				candidates.Add(item)
-				//LocalLog.Debugf("Add candidate %v", item.Paths.RsyncSourcePath)
-				LocalLog.Debugf("Move up from: %v", item.Paths.RsyncSourcePath)
-				//prev = item
-				//prevMoveUp = moveUp
-				moveUp = true
-
-				if found.Metrics.FullCount/div > 0 {
-					weight += found.Metrics.FullCount / div
-				} else {
-					weight++
-				}
-
-				//x := interpolLinear2(x, lastX, y, lastY, int64(mbSize*1024*1024))
-				//if x == nil {
-				//	weight++
-				//} else {
-				//	weight = int(*x)
-				//}
-
-				//LocalLog.Debugf("New weight=%v, interpol=%v", weight, newWeight)
-				//weight = int(newWeight)
-			}
-			if moveUp {
-				item = findUpNonMeasuredDirByWeight(item, weight)
-			} else {
-				item = findDownNonMeasuredDirByWeight(found, weight)
-			}
-
-			if found.Metrics.FullCount/div > 0 {
-				div *= 2
-			}
-			//count++
-			first = false
-		}
-	}
-	return nil, count, nil
-}
-*/

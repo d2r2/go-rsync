@@ -1,3 +1,14 @@
+//--------------------------------------------------------------------------------------------------
+// This file is a part of Gorsync Backup project (backup RSYNC frontend).
+// Copyright (c) 2017-2020 Denis Dyakov <denis.dyakov@gmail.com>
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+// BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//--------------------------------------------------------------------------------------------------
+
 package rsync
 
 import (
@@ -17,9 +28,9 @@ import (
 
 // ObtainDirLocalSize parse STDOUT from RSYNC dry-run execution to extract local size of directory without nested folders.
 func ObtainDirLocalSize(ctx context.Context, password *string, dir *core.Dir,
-	retryCount *int, log *Logging) (*core.FolderSize, error) {
+	retryCount *int, rsyncProtocol string, log *Logging) (*core.FolderSize, error) {
 
-	// rsync "dry run" to get total size of backup
+	// RSYNC "dry run" to get total size of backup
 	var stdOut bytes.Buffer
 	options := NewOptions(WithDefaultParams([]string{"--dry-run", "--compress"})).
 		AddParams("--dirs").
@@ -29,7 +40,7 @@ func ObtainDirLocalSize(ctx context.Context, password *string, dir *core.Dir,
 	if sessionErr != nil {
 		return nil, sessionErr
 	}
-	backupSize, err := extractBackupSize(&stdOut)
+	backupSize, err := extractBackupSize(&stdOut, rsyncProtocol)
 	if err != nil {
 		return nil, err
 	}
@@ -42,9 +53,9 @@ func ObtainDirLocalSize(ctx context.Context, password *string, dir *core.Dir,
 
 // ObtainDirLocalSize parse STDOUT from RSYNC dry-run execution to extract full size of directory.
 func ObtainDirFullSize(ctx context.Context, password *string, dir *core.Dir,
-	retryCount *int, log *Logging) (*core.FolderSize, error) {
+	retryCount *int, rsyncProtocol string, log *Logging) (*core.FolderSize, error) {
 
-	// rsync "dry run" to get total size of backup
+	// RSYNC "dry run" to get total size of backup
 	var stdOut bytes.Buffer
 	options := NewOptions(WithDefaultParams([]string{"--dry-run", "--compress"})).
 		AddParams("--recursive", "--include=*/").
@@ -54,7 +65,7 @@ func ObtainDirFullSize(ctx context.Context, password *string, dir *core.Dir,
 	if sessionErr != nil {
 		return nil, sessionErr
 	}
-	backupSize, err := extractBackupSize(&stdOut)
+	backupSize, err := extractBackupSize(&stdOut, rsyncProtocol)
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +73,7 @@ func ObtainDirFullSize(ctx context.Context, password *string, dir *core.Dir,
 }
 
 // extractBackupSize parse and decode RSYNC STDOUT output to obtain folder content size.
-func extractBackupSize(stdOut *bytes.Buffer) (*core.FolderSize, error) {
+func extractBackupSize(stdOut *bytes.Buffer, rsyncProtocol string) (*core.FolderSize, error) {
 	// Parse the line: "total size is 2,227,810,354  speedup is 507,127.33 (DRY RUN)"
 	// to extract "total size" value.
 	re := regexp.MustCompile(`total\s+size\s+is\s+(?P<Number>((\d+)\,?)+)`)

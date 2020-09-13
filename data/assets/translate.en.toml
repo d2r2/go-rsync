@@ -37,6 +37,18 @@ other = "_YES"
 [DialogNoButton]
 other = "_NO"
 
+[LocaleSetAppLangugeInterface]
+other = "Set application interface language to \"{{.Language}}\""
+
+[ActionDoesNotFound]
+other = "Action \"{{.ActionName}}\" doesn't found"
+
+[MainAppSubsystemInitialized]
+other = "Subsystem \"{{.Subsystem}}\" successfully initialized"
+
+[MainAppExitedNormally]
+other = "Application exited normally. Goodbye"
+
 
 #----------------------------------------------------
 # About dialog translations
@@ -49,7 +61,7 @@ other = "Features and benefits:"
 [AboutDlgAppFeaturesAndBenefitsSection]
 description = "AboutDialog Features and Benefits section text"
 other = """
-- Multiple backup profiles are supported. Moreover, each profile
+- Multiple backup profiles supported. Moreover, each profile
 can be configured to get data from multiple RSYNC sources.
 - 2-pass backup session approach to estimate optimal backup
 strategy and backup size in 1st pass. Display estimated
@@ -70,7 +82,8 @@ Easy-to-use backup app with innovative approach.
 
 [AboutDlgReleasedUnderLicense]
 description = "License application released under"
-other = "Released under {{.LicenseName}}."
+other = """Released under {{.LicenseName}}.
+This program comes with absolutely no warranty."""
 
 [AboutDlgFollowMyGithubProjectTitle]
 description = "AboutDialog my github project title"
@@ -78,13 +91,17 @@ other = "Follow my golang projects on GitHub:"
 
 [AboutDlgAppCopyright]
 description = "Application copyright line"
-other = "Copyright {{.AppCreationYears}} {{.AppCopyrightAuthor}}"
+other = "© {{.AppCreationYears}} {{.AppCopyrightAuthor}}"
 
 [AboutDlgAppAuthorsBlock]
 description = "Application authors block"
 other = """
 Written by Denis Dyakov <denis.dyakov@gmail.com>
 """
+
+[AboutDlgAppLearnMore]
+description = "Web site link to application"
+other = "Learn more about {{.AppTitle}}"
 
 [AboutDlgDoNotShowCaption]
 other = "Do not show this information at application startup"
@@ -117,6 +134,9 @@ other = "Backup settings"
 [PrefDlgAdvancedRsyncFileTransferOptionsSection]
 description = "Option section title"
 other = "RSYNC file transfer options"
+
+[PrefDlgRestartPanelCaptionWithLink]
+other = "Application reload required. Click to <a href=\"restart_uri\">restart</a> application."
 
 [PrefDlgDoNotShowAtAppStartupCaption]
 other = "Do not show about information dialog\nat application startup"
@@ -161,7 +181,7 @@ other = "File system extra path to add to the backup destination root folder, wh
 other = "Not verified (disabled)"
 
 [PrefDlgDestinationSubpathExpressionError]
-other = "Invalid file path expression. Perhaps path string contains some restricted characters, like <>:\"|?*, or empty folder names"
+other = "Invalid file path expression. Perhaps path string contains some restricted characters, like <>:\"|?*, leading or trailing spaces in folder names, either empty folder names found."
 
 [PrefDlgDestinationSubpathNotUniqueError]
 other = "Each destination subpath should be unique for backup profile"
@@ -472,7 +492,7 @@ other = "Destination path is empty. First select destination folder for backup."
 other = "Folder \"{{.FolderPath}}\" does not exist or permission denied."
 
 [AppWindowDestPathIsNotExistAdvise]
-other = "Perhaps, you need to attach destination USB-disk or flash drive, and re-select backup profile."
+other = "Perhaps, you need to attach destination USB-disk or flash drive, then re-select backup profile."
 
 [AppWindowBackupProgressStartMessage]
 other = "Start backup process..."
@@ -804,6 +824,9 @@ other = "can't find folder size in RSYNC output"
 
 [RsyncCannotParseFolderSizeOutputError]
 other = "can't parse folder size from RSYNC output \"{{.Text}}\""
+
+[RsyncExtractVersionAndProtocolError]
+other = "RSYNC version and protocol can't be extracted: report to developers"
 
 
 #----------------------------------------------------

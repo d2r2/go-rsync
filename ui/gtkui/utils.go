@@ -1,3 +1,14 @@
+//--------------------------------------------------------------------------------------------------
+// This file is a part of Gorsync Backup project (backup RSYNC frontend).
+// Copyright (c) 2017-2020 Denis Dyakov <denis.dyakov@gmail.com>
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+// BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//--------------------------------------------------------------------------------------------------
+
 package gtkui
 
 import (
@@ -327,7 +338,7 @@ type GLibIdleCallStub struct {
 	sync.Mutex
 }
 
-var glibIdleCallStub GLibIdleCallStub
+// var glibIdleCallStub GLibIdleCallStub
 
 var IdleAdd = func(f interface{}, args ...interface{}) (glib.SourceHandle, error) {
 	// glibIdleCallStub.Lock()
@@ -454,4 +465,11 @@ func isModulesConfigError(modules []backup.Module, formatMultiline bool) (bool, 
 		}
 	}
 	return false, ""
+}
+
+// RestartTimer restart timer with call fire after specific millisecond period.
+// Used as a trigger for validation events.
+func RestartTimer(timer *time.Timer, milliseconds time.Duration) {
+	timer.Stop()
+	timer.Reset(time.Millisecond * milliseconds)
 }
