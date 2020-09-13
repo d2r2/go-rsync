@@ -1,3 +1,14 @@
+//--------------------------------------------------------------------------------------------------
+// This file is a part of Gorsync Backup project (backup RSYNC frontend).
+// Copyright (c) 2017-2020 Denis Dyakov <denis.dyakov@gmail.com>
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+// BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//--------------------------------------------------------------------------------------------------
+
 package backup
 
 import (
@@ -9,7 +20,7 @@ import (
 )
 
 // LogFiles track log files during backup session.
-// Has functionality to relocate log files from
+// It has functionality to relocate log files from
 // one storage to another: used when log files moved
 // from /tmp partition to permanent destination location.
 type LogFiles struct {
@@ -17,12 +28,15 @@ type LogFiles struct {
 	logs     map[string]*os.File
 }
 
+// NewLogFiles create new LogFiles instance.
 func NewLogFiles() *LogFiles {
 	v := &LogFiles{logs: make(map[string]*os.File)}
 	return v
 }
 
-func (v *LogFiles) GetAppendFile(suffixPath string) (*os.File, error) {
+// CreateOrGetLogFile return os.File by file name identifier.
+// This allow to control and operate multiple log files in one place.
+func (v *LogFiles) CreateOrGetLogFile(suffixPath string) (*os.File, error) {
 	err := v.assignRootPathByDefault()
 	if err != nil {
 		return nil, err
@@ -42,6 +56,7 @@ func (v *LogFiles) getFullPath(suffixPath string) string {
 	return path.Join(v.rootPath, suffixPath)
 }
 
+// Close will close all os.File instances found in the object.
 func (v *LogFiles) Close() error {
 	for suffixPath, val := range v.logs {
 		if val != nil {
@@ -57,8 +72,8 @@ func (v *LogFiles) Close() error {
 
 // ChangeRootPath relocate log files from one storage to another.
 // Used to move from 1st backup stage (plan stage) to 2nd (backup stage).
-// In 1st stage we keep log files in /tmp partition, in 2nd stage
-// we relocate and save them to destination location.
+// In 1st backup stage we keep log files in /tmp partition, in 2nd stage
+// we relocate and save them in destination location.
 func (v *LogFiles) ChangeRootPath(newRootPath string) error {
 	err := v.Close()
 	if err != nil {

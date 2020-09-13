@@ -1,3 +1,14 @@
+//--------------------------------------------------------------------------------------------------
+// This file is a part of Gorsync Backup project (backup RSYNC frontend).
+// Copyright (c) 2017-2020 Denis Dyakov <denis.dyakov@gmail.com>
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+// BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//--------------------------------------------------------------------------------------------------
+
 package backup
 
 import (
@@ -17,7 +28,9 @@ import (
 )
 
 var (
+	// DoubleSplitLogLine keep continuous line build with specific char.
 	DoubleSplitLogLine string = strings.Repeat("=", 100)
+	// SingleSplitLogLine keep continuous line build with specific char.
 	SingleSplitLogLine string = strings.Repeat("-", 100)
 )
 
@@ -34,12 +47,12 @@ func BuildBackupPlan(ctx context.Context, lg logger.PackageLog, config *Config,
 	// create main log file
 	log := core.NewProxyLog(lg, "backup", 6, "2006-01-02T15:04:05",
 		func(line string) error {
-			writer, err := progress.LogFiles.GetAppendFile(GetLogFileName())
+			writer, err := progress.LogFiles.CreateOrGetLogFile(GetLogFileName())
 			if err != nil {
 				return err
 			}
 			// ignore error
-			io.WriteString(writer, line)
+			_, _ = io.WriteString(writer, line)
 			return nil
 		}, logger.InfoLevel)
 	progress.Log = log
@@ -50,12 +63,12 @@ func BuildBackupPlan(ctx context.Context, lg logger.PackageLog, config *Config,
 	if rsyncLog.EnableLog {
 		log = core.NewProxyLog(nil, "rsync", 5, "2006-01-02T15:04:05",
 			func(line string) error {
-				writer, err := progress.LogFiles.GetAppendFile(GetRsyncLogFileName())
+				writer, err := progress.LogFiles.CreateOrGetLogFile(GetRsyncLogFileName())
 				if err != nil {
 					return err
 				}
 				// ignore error
-				io.WriteString(writer, line)
+				_, _ = io.WriteString(writer, line)
 				return nil
 			}, logger.InfoLevel)
 		rsyncLog.Log = log
@@ -74,6 +87,15 @@ func BuildBackupPlan(ctx context.Context, lg logger.PackageLog, config *Config,
 	progress.Log.Info(locale.TP(MsgLogPlanStartIterateViaNSources,
 		struct{ SourceCount int }{SourceCount: len(modules)},
 		len(modules)))
+
+	_, _, err := rsync.GetRsyncVersion()
+	if err != nil {
+		if rsync.IsExtractVersionAndProtocolError(err) {
+			progress.Log.Warn(err.Error())
+		} else {
+			return nil, nil, err
+		}
+	}
 
 	for i, item := range modules {
 		progress.Log.Info(SingleSplitLogLine)
@@ -135,6 +157,12 @@ func estimateNode(ctx context.Context, password *string, module Module, progress
 		return nil, nil, err
 	}
 
+	// Get RSYNC protocol version to choose console text output parsing approach
+	_, protocol, err := rsync.GetRsyncVersion()
+	if err != nil && !rsync.IsExtractVersionAndProtocolError(err) {
+		return nil, nil, err
+	}
+
 	// RSYNC settings to copy only folder's structure and some specific files
 	options := rsync.NewOptions(rsync.WithDefaultParams([]string{"--recursive"})).
 		AddParams(f("--include=%s", "*"+"/")).
@@ -156,7 +184,7 @@ func estimateNode(ctx context.Context, password *string, module Module, progress
 	progress.Log.Debug("---------------------------------")
 
 	blockSize := config.getBackupBlockSizeSettings()
-	count, err := MeasureDir(ctx, password, dir, config.RsyncRetryCount, progress.RsyncLog, blockSize)
+	count, err := MeasureDir(ctx, password, dir, config.RsyncRetryCount, protocol, progress.RsyncLog, blockSize)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -241,7 +269,7 @@ func runBackup(plan *Plan, progress *Progress, destPath string, errorHookCall rs
 		return err
 	}
 	LocalLog.Debugf("End searching for previous backups")
-	progress.PrevBackupsUsed(prevBackups)
+	progress.PreviousBackupsUsed(prevBackups)
 	if len(prevBackups.Backups) > 0 && plan.Config.usePreviousBackupEnabled() {
 		paths, err := core.GetRelativePaths(destPath, prevBackups.GetDirPaths())
 		if err != nil {
@@ -279,8 +307,8 @@ func runBackup(plan *Plan, progress *Progress, destPath string, errorHookCall rs
 		sourceID := GenerateSourceID(node.Module.SourceRsync)
 		prevBackups2 := prevBackups.FilterBySourceID(sourceID)
 		// run specific RSYNC source to backup
-		err := runBackupNode(plan, node, /*plan.Config,*/
-			progress, destPath2, errorHookCall, prevBackups2)
+		err := runBackupNode(plan, node, progress, destPath2,
+			errorHookCall, prevBackups2)
 		if err != nil {
 			return err
 		}
@@ -290,7 +318,7 @@ func runBackup(plan *Plan, progress *Progress, destPath string, errorHookCall rs
 	LocalLog.Debugf("BACKUP FINAL: total progress %+v", progress.TotalProgress)
 	LocalLog.Debugf("BACKUP FINAL: left to backup %+v", progress.LeftToBackup(plan))
 
-	// rename backup session folder, since backup process is completed
+	// rename backup session folder, when backup process is completed
 	progress.Log.Info(SingleSplitLogLine)
 	newBackupFolder := GetBackupFolderName(false, &progress.StartBackupTime)
 	destPath3 := progress.GetBackupFullPath(newBackupFolder)
@@ -327,7 +355,7 @@ func runBackup(plan *Plan, progress *Progress, destPath string, errorHookCall rs
 
 // Perform backup of one source defined in backup session preferences.
 func runBackupNode(plan *Plan, node Node, progress *Progress, destRootPath string,
-	errorHookCall rsync.ErrorHookCall, prevBackups *PrevBackups) error {
+	errorHookCall rsync.ErrorHookCall, prevBackups *PreviousBackups) error {
 
 	paths := core.SrcDstPath{
 		RsyncSourcePath: core.RsyncPathJoin(node.Module.SourceRsync, ""),
@@ -485,7 +513,7 @@ func backupDir(dir *core.Dir, module *Module, plan *Plan, progress *Progress,
 			return err
 		}
 	} else if dir.Metrics.BackupType == core.FBT_CONTENT {
-		// process only current folder, then go deep to process subfolders recursively
+		// process only current folder, then go deep to process sub-folders recursively
 		backupType = core.FBT_CONTENT
 		err = progress.EventBackupStage_FolderStartBackup(paths, backupType, plan)
 		if err != nil {
@@ -518,7 +546,7 @@ func backupDir(dir *core.Dir, module *Module, plan *Plan, progress *Progress,
 			return err
 		}
 
-		// process subfolders recursively
+		// process sub-folders recursively
 		for _, item := range dir.Childs {
 			prevBackupPaths2 := append([]string(nil), prevBackupPaths...)
 			for i, path := range prevBackupPaths2 {

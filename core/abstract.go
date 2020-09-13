@@ -1,3 +1,14 @@
+//--------------------------------------------------------------------------------------------------
+// This file is a part of Gorsync Backup project (backup RSYNC frontend).
+// Copyright (c) 2017-2020 Denis Dyakov <denis.dyakov@gmail.com>
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+// BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//--------------------------------------------------------------------------------------------------
+
 package core
 
 // FolderBackupType define how
@@ -5,10 +16,14 @@ package core
 type FolderBackupType int
 
 const (
-	FBT_UNKNOWN   FolderBackupType = iota // Undefined backup approach.
-	FBT_SKIP                              // Skip to backup folder content (including subfolders).
-	FBT_RECURSIVE                         // Backup full folder content including all subfolders.
-	FBT_CONTENT                           // Backup only files located directly in the folder. Do not backup subfolders.
+	// FBT_UNKNOWN denotes undefined backup approach.
+	FBT_UNKNOWN FolderBackupType = iota
+	// FBT_SKIP denotes skip to backup folder content (including subfolders).
+	FBT_SKIP
+	// FBT_RECURSIVE denotes backup full folder content including all subfolders.
+	FBT_RECURSIVE
+	// FBT_CONTENT denotes backup only files located directly in the folder. Do not backup subfolders.
+	FBT_CONTENT
 )
 
 // String implement Stringer interface.
@@ -30,6 +45,7 @@ func (v FolderBackupType) String() string {
 // FolderSize used to signify size of backup objects.
 type FolderSize int64
 
+// NewFolderSize create new FolderSize instance.
 func NewFolderSize(size int64) FolderSize {
 	v := FolderSize(size)
 	return v

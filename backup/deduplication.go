@@ -1,3 +1,14 @@
+//--------------------------------------------------------------------------------------------------
+// This file is a part of Gorsync Backup project (backup RSYNC frontend).
+// Copyright (c) 2017-2020 Denis Dyakov <denis.dyakov@gmail.com>
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+// BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//--------------------------------------------------------------------------------------------------
+
 package backup
 
 import (
@@ -48,7 +59,10 @@ func chipherStr(str string) string {
 	hasher := sha256.New()
 	var b bytes.Buffer
 	b.WriteString(str)
-	hasher.Write(b.Bytes())
+	_, err := hasher.Write(b.Bytes())
+	if err != nil {
+		LocalLog.Fatal(err)
+	}
 	sha := base64.URLEncoding.EncodeToString(hasher.Sum(nil))
 	return sha
 }
@@ -58,6 +72,10 @@ type NodeSignatures struct {
 	Signatures []NodeSignature
 }
 
+// GetNodeSignatures convert RSYNC module source URLs to
+// unique identifiers built with use chiper function.
+// These signatures used lately to find previous backup session
+// for deduplication purpose.
 func GetNodeSignatures(modules []Module) NodeSignatures {
 	signatures := make([]NodeSignature, len(modules))
 	for i, item := range modules {
@@ -67,6 +85,7 @@ func GetNodeSignatures(modules []Module) NodeSignatures {
 	return s
 }
 
+// FindFirstSignature find first item which match signature parameter.
 func (v NodeSignatures) FindFirstSignature(signature string) *NodeSignature {
 	for _, item := range v.Signatures {
 		if item.SourceRsyncCipher == signature {
@@ -91,13 +110,13 @@ func (v PrevBackup) GetDirPath() string {
 	return backupPath
 }
 
-// PrevBackups keeps list of previous backup found. See description of PrevBackup.
-type PrevBackups struct {
+// PreviousBackups keeps list of previous backup found. See description of PrevBackup.
+type PreviousBackups struct {
 	Backups []PrevBackup
 }
 
 // GetDirPaths provide file system paths to previous backup sessions found.
-func (v *PrevBackups) GetDirPaths() []string {
+func (v *PreviousBackups) GetDirPaths() []string {
 	paths := make([]string, len(v.Backups))
 	for i, b := range v.Backups {
 		paths[i] = b.GetDirPath()
@@ -107,14 +126,14 @@ func (v *PrevBackups) GetDirPaths() []string {
 
 // FilterBySourceID choose backup sessions which contains same source
 // as specified by sourceID.
-func (v *PrevBackups) FilterBySourceID(sourceID string) *PrevBackups {
-	var newPrevBackups []PrevBackup
+func (v *PreviousBackups) FilterBySourceID(sourceID string) *PreviousBackups {
+	var newPreviousBackups []PrevBackup
 	for _, v := range v.Backups {
 		if sourceID == v.Signature.SourceRsyncCipher {
-			newPrevBackups = append(newPrevBackups, v)
+			newPreviousBackups = append(newPreviousBackups, v)
 		}
 	}
-	return &PrevBackups{Backups: newPrevBackups}
+	return &PreviousBackups{Backups: newPreviousBackups}
 }
 
 type prevBackupEntry struct {
@@ -127,7 +146,7 @@ type prevBackupEntry struct {
 // In the end it should return list of previous backup sessions sorted by date/time
 // in descending order (recent go first).
 func FindPrevBackupPathsByNodeSignatures(lg logger.PackageLog, destPath string,
-	signs NodeSignatures, lastN int) (*PrevBackups, error) {
+	signs NodeSignatures, lastN int) (*PreviousBackups, error) {
 
 	// select all child items from root backup destination path
 	items, err := ioutil.ReadDir(destPath)
@@ -215,7 +234,7 @@ func FindPrevBackupPathsByNodeSignatures(lg logger.PackageLog, destPath string,
 		}
 	}
 
-	backups2 := &PrevBackups{Backups: backups}
+	backups2 := &PreviousBackups{Backups: backups}
 	return backups2, nil
 }
 

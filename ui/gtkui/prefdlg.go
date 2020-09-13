@@ -1,3 +1,14 @@
+//--------------------------------------------------------------------------------------------------
+// This file is a part of Gorsync Backup project (backup RSYNC frontend).
+// Copyright (c) 2017-2020 Denis Dyakov <denis.dyakov@gmail.com>
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+// BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//--------------------------------------------------------------------------------------------------
+
 package gtkui
 
 import (
@@ -6,12 +17,14 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 	"unicode/utf8"
 
+	"github.com/d2r2/go-rsync/core"
 	"github.com/d2r2/go-rsync/locale"
 	"github.com/d2r2/go-rsync/rsync"
 	"github.com/d2r2/gotk3/glib"
@@ -52,12 +65,18 @@ const (
 
 // GeneralPreferencesNew create preference dialog with "General" page, where controls
 // being bound to GLib setting object to save/restore functionality.
-func GeneralPreferencesNew(appSettings *SettingsStore) (*gtk.Container, error) {
+func GeneralPreferencesNew(win *gtk.ApplicationWindow, appSettings *SettingsStore,
+	actions *glib.ActionMap, prefRow *PreferenceRow) (*gtk.Container, error) {
+
 	box, err := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 6)
 	if err != nil {
 		return nil, err
 	}
 	SetAllMargins(box, 18)
+
+	if prefRow != nil {
+		prefRow.Page = &box.Container
+	}
 
 	bh := appSettings.NewBindingHelper()
 
@@ -154,6 +173,25 @@ func GeneralPreferencesNew(appSettings *SettingsStore) (*gtk.Container, error) {
 	cbUILanguage.SetTooltipText(locale.T(MsgPrefDlgLanguageHint, nil))
 	bh.Bind(CFG_UI_LANGUAGE, cbUILanguage, "active-id", glib.SETTINGS_BIND_DEFAULT)
 	grid.Attach(cbUILanguage, DesignSecondCol, row, 1, 1)
+	initialLang := cbUILanguage.GetActiveID()
+	const restartServiceActivationMs = 1000
+	restartServiceActivationTimer := time.AfterFunc(time.Millisecond*restartServiceActivationMs, func() {
+		MustIdleAdd(func() {
+			activate := initialLang != cbUILanguage.GetActiveID()
+			// Show "restart app" panel only when language has changed
+			// from original setting. Otherwise - hide panel.
+			err := prefRow.ActivateRestartService(activate)
+			if err != nil {
+				lg.Fatal(err)
+			}
+		})
+	})
+	_, err = cbUILanguage.Connect("changed", func(v *gtk.ComboBox, tmr *time.Timer) {
+		RestartTimer(tmr, restartServiceActivationMs)
+	}, restartServiceActivationTimer)
+	if err != nil {
+		return nil, err
+	}
 	row++
 
 	// Session log font size
@@ -216,65 +254,53 @@ func GeneralPreferencesNew(appSettings *SettingsStore) (*gtk.Container, error) {
 	grid.Attach(edIgnoreFile, DesignSecondCol, row, 1, 1)
 	row++
 
-	/*
-		// ---------------------------------------------------------
-		// Debug section
-		// ---------------------------------------------------------
-		lbl, err = gtk.LabelNew(NewMarkup(MARKUP_WEIGHT_BOLD, 0, 0,
-			"DEBUG SECTION", "").String())
+	if prefRow != nil {
+		rsBox, err := gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 6)
 		if err != nil {
 			return nil, err
 		}
-		lbl.SetUseMarkup(true)
-		lbl.SetHAlign(gtk.ALIGN_START)
+		err = AddStyleClass(&rsBox.Widget, "info-panel")
 		if err != nil {
 			return nil, err
 		}
-		grid.Attach(lbl, 0, row, 2, 1)
-		row++
-
-		pb, err := gtk.ProgressBarNew()
+		infoBox, err := createBoxWithThemedIcon(STOCK_IMPORTANT_ICON,
+			[]string{"image-information", "image-shake"})
 		if err != nil {
 			return nil, err
 		}
-		pb.SetPulseStep(0.1)
-		err = FixProgressBarCSSStyle(pb)
+		rsBox.Add(infoBox)
+		lblRestart, err := SetupLabelJustifyLeft("")
 		if err != nil {
 			return nil, err
 		}
-		grid.Attach(pb, 0, row, 2, 1)
-		row++
-
-		btn, err := gtk.ButtonNew()
-		if err != nil {
-			return nil, err
-		}
-		lbl, err = gtk.LabelNew("1")
-		if err != nil {
-			return nil, err
-		}
-		btn.Add(lbl)
-		btn.Connect("clicked", func(btn *gtk.Button) {
-			pb.Pulse()
+		lblRestart.SetMarkup(locale.T(MsgPrefDlgRestartPanelCaptionWithLink, nil))
+		_, err = lblRestart.Connect("activate-link", func(v *gtk.Label, href string) {
+			if href == "restart_uri" {
+				core.SetAppRunMode(core.AppRunReload)
+				actionName := "QuitAction"
+				action := actions.LookupAction(actionName)
+				if action == nil {
+					err := errors.New(locale.T(MsgActionDoesNotFound,
+						struct{ ActionName string }{ActionName: actionName}))
+					lg.Fatal(err)
+				}
+				action.Activate(nil)
+			}
 		})
-		grid.Attach(btn, 0, row, 1, 1)
-		row++
+		if err != nil {
+			return nil, err
+		}
+		rsBox.Add(lblRestart)
 
-		btn, err = gtk.ButtonNew()
+		rvl, err := gtk.RevealerNew()
 		if err != nil {
 			return nil, err
 		}
-		lbl, err = gtk.LabelNew("2")
-		if err != nil {
-			return nil, err
-		}
-		btn.Add(lbl)
-		btn.Connect("clicked", func(btn *gtk.Button) {
-			pb.SetFraction(0.3)
-		})
-		grid.Attach(btn, 0, row, 1, 1)
-		row++
-	*/
+		rvl.Add(rsBox)
+		prefRow.RestartService = &RestartService{Revealer: rvl}
+		// box.PackStart(rvl, false, false, 0)
+		box.Add(rvl)
+	}
 
 	box.Add(grid)
 
@@ -288,8 +314,8 @@ func GeneralPreferencesNew(appSettings *SettingsStore) (*gtk.Container, error) {
 	return &box.Container, nil
 }
 
-// GetSubpathRegexp verify that proposed file system path expression is valid.
-// Understand path separator for different OS, taking path separator setting from runtime.
+// GetSubpathNotAllowedCharsNotFoundRegexp implement path expression primitive validation on the level
+// of lexical parcing. Understand path separator for different OS, taking path separator setting from runtime.
 //
 // Use Microsoft Windows restriction character list taken from here:
 // https://stackoverflow.com/questions/1976007/what-characters-are-forbidden-in-windows-and-linux-directory-names
@@ -308,9 +334,7 @@ func GeneralPreferencesNew(appSettings *SettingsStore) (*gtk.Container, error) {
 // ? (question mark)
 // * (asterisk)
 //
-// TODO: do not catch folder names consist from whitespace characters only. Fix it.
-//
-func GetSubpathRegexp() (*regexp.Regexp, error) {
+func GetSubpathNotAllowedCharsNotFoundRegexp() (*regexp.Regexp, error) {
 	template := spew.Sprintf(`^\%[1]c?([^\<\>\:\"\|\?\*\%[1]c]+\%[1]c?)*$`, os.PathSeparator)
 	lg.Debugf("Subpath regex template: %s", template)
 	rexp, err := regexp.Compile(template)
@@ -320,21 +344,24 @@ func GetSubpathRegexp() (*regexp.Regexp, error) {
 	return rexp, nil
 }
 
-// RestartTimer restart timer with call fire after specific millisecond period.
-// Used as a trigger for validation events.
-func RestartTimer(timer *time.Timer, milliseconds time.Duration) {
-	timer.Stop()
-	timer.Reset(time.Millisecond * milliseconds)
+func GetFolderNamesEmptyOrLeadingTrailingSpacesFoundRegexp() (*regexp.Regexp, error) {
+	template := spew.Sprintf(`%[1]c\s+|^\s+|\s+%[1]c|\s+$|^$`, os.PathSeparator)
+	lg.Debugf("Subpath regex template: %s", template)
+	rexp, err := regexp.Compile(template)
+	if err != nil {
+		return nil, err
+	}
+	return rexp, nil
 }
 
 func createBackupSourceBlock(profileID, sourceID string, sourceSettings *SettingsStore,
-	prefRow *PreferenceRow, validator *UIValidator) (gtk.IWidget, error) {
+	prefRow *PreferenceRow, validator *UIValidator) (*gtk.Container, error) {
 
 	box, err := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 6)
 	if err != nil {
 		return nil, err
 	}
-	SetAllMargins(box, 18)
+	SetAllMargins(box, 12)
 
 	bh := sourceSettings.NewBindingHelper()
 
@@ -344,7 +371,7 @@ func createBackupSourceBlock(profileID, sourceID string, sourceSettings *Setting
 	grid.SetHAlign(gtk.ALIGN_FILL)
 	row := 0
 
-	// Source rsync path
+	// Source RSYNC path
 	markup := NewMarkup(MARKUP_WEIGHT_NORMAL, 0, 0,
 		locale.T(MsgPrefDlgSourceRsyncPathCaption, nil), "")
 	lbl, err := SetupLabelMarkupJustifyLeft(markup)
@@ -684,7 +711,7 @@ func createBackupSourceBlock(profileID, sourceID string, sourceSettings *Setting
 	grid.Attach(swEnabled, 1, row, 1, 1)
 	row++
 
-	// UIValidator object is used here to simplify and standardize communication
+	// UIValidator object is used to simplify and standardize communication
 	// between UI and long running asynchronous processes. For instance, UIValidator
 	// helps to run in background RSYNC, which may go on for minutes (in case of
 	// network troubles), to verify that data source URL is valid.
@@ -707,9 +734,15 @@ func createBackupSourceBlock(profileID, sourceID string, sourceSettings *Setting
 				return validatorConversionError("ValidatorData.Items[2]", "*PreferenceRow")
 			}
 			if swtch.GetActive() {
-				RemoveStyleClassesAll(&entry.Widget)
+				err = RemoveStyleClassesAll(&entry.Widget)
+				if err != nil {
+					return err
+				}
 				entry.SetIconFromIconName(gtk.ENTRY_ICON_SECONDARY, STOCK_SYNCHRONIZING_ICON)
-				AddStyleClass(&entry.Widget, "entry-image-right-spin")
+				err = AddStyleClass(&entry.Widget, "entry-image-right-spin")
+				if err != nil {
+					return err
+				}
 				err = row.AddStatus(entry.Native(), ProfileStatusValidating, "")
 				if err != nil {
 					return err
@@ -797,13 +830,19 @@ func createBackupSourceBlock(profileID, sourceID string, sourceSettings *Setting
 			MustIdleAdd(func() {
 
 				if swtch.GetActive() {
-					RemoveStyleClass(&entry.Widget, "entry-image-right-spin")
+					err := RemoveStyleClass(&entry.Widget, "entry-image-right-spin")
+					if err != nil {
+						lg.Fatal(err)
+					}
 					warning, ok := results[0].(*string)
 					if !ok {
 						lg.Fatal(validatorConversionError("interface{}[0]", "*string"))
 					}
 					if warning != nil {
-						AddStyleClasses(&entry.Widget, []string{"entry-image-right-error", "entry-image-right-shake"})
+						err = AddStyleClasses(&entry.Widget, []string{"entry-image-right-error", "entry-image-right-shake"})
+						if err != nil {
+							lg.Fatal(err)
+						}
 						entry.SetIconFromIconName(gtk.ENTRY_ICON_SECONDARY, STOCK_IMPORTANT_ICON)
 						markup := markupTooltip(NewMarkup(MARKUP_WEIGHT_BOLD, MARKUP_COLOR_ORANGE_RED, 0, *warning, nil),
 							RsyncSourcePathDescription)
@@ -834,7 +873,7 @@ func createBackupSourceBlock(profileID, sourceID string, sourceSettings *Setting
 			return nil
 		}, edRsyncPath, swEnabled, prefRow)
 
-	rsyncPathTimer := time.AfterFunc(time.Millisecond*1000, func() {
+	rsyncPathChangeTimer := time.AfterFunc(time.Millisecond*1000, func() {
 		MustIdleAdd(func() {
 			err := validator.Validate(rsyncPathValidatorGroup, rsyncPathValidatorIndex)
 			if err != nil {
@@ -842,15 +881,15 @@ func createBackupSourceBlock(profileID, sourceID string, sourceSettings *Setting
 			}
 		})
 	})
-	rsyncPathTimer.Stop()
+	rsyncPathChangeTimer.Stop()
 	_, err = edRsyncPath.Connect("changed", func(v *gtk.Entry) {
-		RestartTimer(rsyncPathTimer, 1000)
+		RestartTimer(rsyncPathChangeTimer, 1000)
 	})
 	if err != nil {
 		return nil, err
 	}
 	_, err = edRsyncPath.Connect("icon-press", func(v *gtk.Entry) {
-		RestartTimer(rsyncPathTimer, 50)
+		RestartTimer(rsyncPathChangeTimer, 50)
 	})
 	if err != nil {
 		return nil, err
@@ -877,12 +916,17 @@ func createBackupSourceBlock(profileID, sourceID string, sourceSettings *Setting
 		edRsyncPath.SetWidthChars(utf8.RuneCountInString(text))
 	}
 
-	rexp, err := GetSubpathRegexp()
+	rexpSubpathNotAllowedCharsNotFound, err := GetSubpathNotAllowedCharsNotFoundRegexp()
+	if err != nil {
+		return nil, err
+	}
+	rexpFolderNamesEmptyOrLeadingTrailingSpacesFound, err :=
+		GetFolderNamesEmptyOrLeadingTrailingSpacesFoundRegexp()
 	if err != nil {
 		return nil, err
 	}
 
-	// UIValidator object is used here to simplify and standardize communication
+	// UIValidator object is used to simplify and standardize communication
 	// between UI and long running asynchronous processes. For instance, UIValidator
 	// helps to run in background RSYNC, which may go on for minutes (in case of
 	// network troubles), to verify that data source URL is valid.
@@ -901,9 +945,15 @@ func createBackupSourceBlock(profileID, sourceID string, sourceSettings *Setting
 				return validatorConversionError("ValidatorData.Items[1]", "*gtk.Switch")
 			}
 			if swtch.GetActive() {
-				RemoveStyleClassesAll(&entry.Widget)
+				err := RemoveStyleClassesAll(&entry.Widget)
+				if err != nil {
+					return err
+				}
 				entry.SetIconFromIconName(gtk.ENTRY_ICON_SECONDARY, STOCK_SYNCHRONIZING_ICON)
-				AddStyleClass(&entry.Widget, "entry-image-right-spin")
+				err = AddStyleClass(&entry.Widget, "entry-image-right-spin")
+				if err != nil {
+					return err
+				}
 			}
 			return nil
 		},
@@ -924,7 +974,8 @@ func createBackupSourceBlock(profileID, sourceID string, sourceSettings *Setting
 				return nil, err
 			}
 			var warning *string
-			if swtch.GetActive() && !rexp.MatchString(destSubPath) {
+			if swtch.GetActive() && (!rexpSubpathNotAllowedCharsNotFound.MatchString(destSubPath) ||
+				rexpFolderNamesEmptyOrLeadingTrailingSpacesFound.MatchString(destSubPath)) {
 				groupLock.Lock()
 				msg := locale.T(MsgPrefDlgDestinationSubpathExpressionError, nil)
 				groupLock.Unlock()
@@ -985,13 +1036,19 @@ func createBackupSourceBlock(profileID, sourceID string, sourceSettings *Setting
 			MustIdleAdd(func() {
 
 				if swtch.GetActive() {
-					RemoveStyleClass(&entry.Widget, "entry-image-right-spin")
+					err := RemoveStyleClass(&entry.Widget, "entry-image-right-spin")
+					if err != nil {
+						lg.Fatal(err)
+					}
 					warning, ok := results[0].(*string)
 					if !ok {
 						lg.Fatal(validatorConversionError("interface{}[0]", "*string"))
 					}
 					if warning != nil {
-						AddStyleClasses(&entry.Widget, []string{"entry-image-right-error", "entry-image-right-shake"})
+						err = AddStyleClasses(&entry.Widget, []string{"entry-image-right-error", "entry-image-right-shake"})
+						if err != nil {
+							lg.Fatal(err)
+						}
 						entry.SetIconFromIconName(gtk.ENTRY_ICON_SECONDARY, STOCK_IMPORTANT_ICON)
 						markup := markupTooltip(NewMarkup(MARKUP_WEIGHT_BOLD, MARKUP_COLOR_ORANGE_RED, 0, *warning, nil),
 							destSubpathHint)
@@ -1022,7 +1079,7 @@ func createBackupSourceBlock(profileID, sourceID string, sourceSettings *Setting
 			})
 			return nil
 		}, edDestSubpath, swEnabled, prefRow)
-	destSubpathTimer := time.AfterFunc(time.Millisecond*500, func() {
+	destSubpathChangeTimer := time.AfterFunc(time.Millisecond*500, func() {
 		MustIdleAdd(func() {
 			err := validator.Validate(destSubPathValidatorGroup, destSubPathValidatorIndex)
 			if err != nil {
@@ -1030,9 +1087,9 @@ func createBackupSourceBlock(profileID, sourceID string, sourceSettings *Setting
 			}
 		})
 	})
-	destSubpathTimer.Stop()
+	destSubpathChangeTimer.Stop()
 	_, err = edDestSubpath.Connect("changed", func(v *gtk.Entry) {
-		RestartTimer(destSubpathTimer, 500)
+		RestartTimer(destSubpathChangeTimer, 500)
 	})
 	if err != nil {
 		return nil, err
@@ -1044,7 +1101,7 @@ func createBackupSourceBlock(profileID, sourceID string, sourceSettings *Setting
 			lg.Fatal(err)
 		}
 		validator.RemoveEntry(destSubPathValidateIndex)
-		RestartTimer(destSubpathTimer, 50)
+		RestartTimer(destSubpathChangeTimer, 50)
 	})
 	if err != nil {
 		return nil, err
@@ -1052,7 +1109,7 @@ func createBackupSourceBlock(profileID, sourceID string, sourceSettings *Setting
 
 	_, err = edAuthPasswd.Connect("changed", func(v *gtk.Entry) {
 		if swEnabled.GetActive() {
-			RestartTimer(rsyncPathTimer, 1000)
+			RestartTimer(rsyncPathChangeTimer, 1000)
 		}
 	})
 	if err != nil {
@@ -1079,8 +1136,8 @@ func createBackupSourceBlock(profileID, sourceID string, sourceSettings *Setting
 			sourceSettings.settings.GetString(CFG_MODULE_CHANGE_FILE_PERMISSION) != "")
 
 	_, err = swEnabled.Connect("state-set", func(v *gtk.Switch) {
-		RestartTimer(rsyncPathTimer, 50)
-		RestartTimer(destSubpathTimer, 50)
+		RestartTimer(rsyncPathChangeTimer, 50)
+		RestartTimer(destSubpathChangeTimer, 50)
 	})
 	if err != nil {
 		return nil, err
@@ -1100,10 +1157,10 @@ func createBackupSourceBlock(profileID, sourceID string, sourceSettings *Setting
 		return nil, err
 	}
 
-	RestartTimer(rsyncPathTimer, 50)
-	RestartTimer(destSubpathTimer, 50)
+	RestartTimer(rsyncPathChangeTimer, 50)
+	RestartTimer(destSubpathChangeTimer, 50)
 
-	return box, nil
+	return &box.Container, nil
 }
 
 // getProfileSettings create GlibSettings object with change event
@@ -1128,8 +1185,9 @@ func getBackupSourceSettings(profileStore *SettingsStore, sourceID string, chang
 	return store, nil
 }
 
-func createBackupSourceBlock2(win *gtk.ApplicationWindow, first bool, profileSettings *SettingsStore, profileID, sourceID string,
-	prefRow *PreferenceRow, validator *UIValidator, profileChanged func()) (*gtk.Container, error) {
+func createBackupSourceBlock2(win *gtk.ApplicationWindow, profileSettings *SettingsStore,
+	profileID, sourceID string, prefRow *PreferenceRow, validator *UIValidator,
+	profileChanged func()) (*gtk.Container, error) {
 
 	sourceSettings, err := getBackupSourceSettings(profileSettings, sourceID, profileChanged)
 	if err != nil {
@@ -1140,17 +1198,38 @@ func createBackupSourceBlock2(win *gtk.ApplicationWindow, first bool, profileSet
 	if err != nil {
 		return nil, err
 	}
+	if err != nil {
+		return nil, err
+	}
 
-	box, err := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 6)
+	box, err := gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 6)
 	if err != nil {
 		return nil, err
 	}
-	box3, err := gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 6)
 	if err != nil {
 		return nil, err
 	}
-	box3.Add(box2)
-	box.Add(box3)
+
+	box31, err := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0)
+	if err != nil {
+		return nil, err
+	}
+	if err != nil {
+		return nil, err
+	}
+	SetMargins(box31, 8, 0, 0, 0)
+	box.PackStart(box31, false, false, 0)
+
+	box.PackStart(box2, true, true, 0)
+
+	box32, err := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 6)
+	if err != nil {
+		return nil, err
+	}
+	if err != nil {
+		return nil, err
+	}
+	box.PackEnd(box32, false, false, 0)
 
 	srclbr, err := gtk.ListBoxRowNew()
 	if err != nil {
@@ -1164,7 +1243,7 @@ func createBackupSourceBlock2(win *gtk.ApplicationWindow, first bool, profileSet
 		return nil, err
 	}
 	btnDeleteSource.SetVAlign(gtk.ALIGN_START)
-	btnDeleteSource.SetSensitive(!first)
+	btnDeleteSource.SetHAlign(gtk.ALIGN_CENTER)
 	btnDeleteSource.SetTooltipText(locale.T(MsgPrefDlgDeleteBackupBlockHint, nil))
 	_, err = btnDeleteSource.Connect("clicked", func(btn *gtk.Button, box *gtk.ListBoxRow) {
 		title := locale.T(MsgPrefDlgDeleteBackupBlockDialogTitle, nil)
@@ -1180,6 +1259,7 @@ func createBackupSourceBlock2(win *gtk.ApplicationWindow, first bool, profileSet
 		}
 
 		if responseYes {
+			delete(prefRow.RsyncSources, btnDeleteSource.Native())
 			box.Destroy()
 
 			sarr := profileSettings.NewSettingsArray(CFG_SOURCE_LIST)
@@ -1187,15 +1267,29 @@ func createBackupSourceBlock2(win *gtk.ApplicationWindow, first bool, profileSet
 			if err != nil {
 				lg.Fatal(err)
 			}
+			prefRow.EnableDisableDeleteButtonsAndRecalculateIndexes()
 		}
 	}, srclbr)
 	if err != nil {
 		return nil, err
 	}
-	box3.PackStart(btnDeleteSource, false, false, 0)
+	box32.PackStart(btnDeleteSource, false, false, 0)
 
-	box3.SetHExpand(true)
-	box3.SetVExpand(false)
+	lbl, err := SetupLabelMarkupJustifyCenter(nil)
+	if err != nil {
+		return nil, err
+	}
+	lbl.SetSensitive(false)
+	err = AddStyleClass(&lbl.Widget, "label-index-caption")
+	if err != nil {
+		return nil, err
+	}
+	box31.PackStart(lbl, false, false, 0)
+
+	prefRow.RsyncSources[btnDeleteSource.Native()] =
+		&RsyncSource{DeleteBtn: btnDeleteSource, IndexLbl: lbl,
+			Index: prefRow.GetLastRsyncModuleIndex() + 1}
+	prefRow.EnableDisableDeleteButtonsAndRecalculateIndexes()
 
 	return &srclbr.Container, nil
 }
@@ -1217,7 +1311,6 @@ func ProfilePreferencesNew(win *gtk.ApplicationWindow, appSettings *SettingsStor
 	if err != nil {
 		return nil, "", err
 	}
-	//frame.SetLabelAlign(0.01, 0.5)
 	box0, err := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 6)
 	if err != nil {
 		return nil, "", err
@@ -1251,8 +1344,8 @@ func ProfilePreferencesNew(win *gtk.ApplicationWindow, appSettings *SettingsStor
 
 	sarr := profileSettings.NewSettingsArray(CFG_SOURCE_LIST)
 
-	for i, srcID := range sarr.GetArrayIDs() {
-		cntr, err := createBackupSourceBlock2(win, i == 0, profileSettings, profileID,
+	for _, srcID := range sarr.GetArrayIDs() {
+		cntr, err := createBackupSourceBlock2(win, profileSettings, profileID,
 			srcID, prefRow, validator, profileChanged)
 		if err != nil {
 			return nil, "", err
@@ -1287,7 +1380,7 @@ func ProfilePreferencesNew(win *gtk.ApplicationWindow, appSettings *SettingsStor
 	edProfileName.SetHExpand(true)
 	edProfileName.SetHAlign(gtk.ALIGN_FILL)
 
-	// UIValidator object is used here to simplify and standardize communication
+	// UIValidator object is used to simplify and standardize communication
 	// between UI and long running asynchronous processes. For instance, UIValidator
 	// helps to run in background RSYNC, which may go on for minutes (in case of
 	// network troubles), to verify that data source URL is valid.
@@ -1301,9 +1394,15 @@ func ProfilePreferencesNew(win *gtk.ApplicationWindow, appSettings *SettingsStor
 			if !ok {
 				return validatorConversionError("ValidatorData.Items[0]", "*gtk.Entry")
 			}
-			RemoveStyleClassesAll(&entry.Widget)
+			err := RemoveStyleClassesAll(&entry.Widget)
+			if err != nil {
+				return err
+			}
 			entry.SetIconFromIconName(gtk.ENTRY_ICON_SECONDARY, STOCK_SYNCHRONIZING_ICON)
-			AddStyleClass(&entry.Widget, "entry-image-right-spin")
+			err = AddStyleClass(&entry.Widget, "entry-image-right-spin")
+			if err != nil {
+				return err
+			}
 			return nil
 		},
 		// 2nd stage of UIValidator. Execute long-running validation processes here.
@@ -1374,7 +1473,10 @@ func ProfilePreferencesNew(win *gtk.ApplicationWindow, appSettings *SettingsStor
 
 			MustIdleAdd(func() {
 				if warning != nil {
-					AddStyleClasses(&entry.Widget, []string{"entry-image-right-error", "entry-image-right-shake"})
+					err := AddStyleClasses(&entry.Widget, []string{"entry-image-right-error", "entry-image-right-shake"})
+					if err != nil {
+						lg.Fatal(err)
+					}
 					entry.SetIconFromIconName(gtk.ENTRY_ICON_SECONDARY, STOCK_IMPORTANT_ICON)
 					markup := markupTooltip(NewMarkup(MARKUP_WEIGHT_BOLD, MARKUP_COLOR_ORANGE_RED, 0, *warning, nil),
 						profileNameHint)
@@ -1396,7 +1498,7 @@ func ProfilePreferencesNew(win *gtk.ApplicationWindow, appSettings *SettingsStor
 			return nil
 		}, edProfileName, prefRow)
 	profileBH.Bind(CFG_PROFILE_NAME, edProfileName, "text", glib.SETTINGS_BIND_DEFAULT)
-	timer := time.AfterFunc(time.Millisecond*500, func() {
+	edProfileNameChangeTimer := time.AfterFunc(time.Millisecond*500, func() {
 		MustIdleAdd(func() {
 			name, err := edProfileName.GetText()
 			if err != nil {
@@ -1410,9 +1512,8 @@ func ProfilePreferencesNew(win *gtk.ApplicationWindow, appSettings *SettingsStor
 		})
 	})
 	_, err = edProfileName.Connect("changed", func(v *gtk.Entry, tmr *time.Timer) {
-		tmr.Stop()
-		tmr.Reset(time.Millisecond * 500)
-	}, timer)
+		RestartTimer(tmr, 500)
+	}, edProfileNameChangeTimer)
 	if err != nil {
 		return nil, "", err
 	}
@@ -1486,7 +1587,7 @@ func ProfilePreferencesNew(win *gtk.ApplicationWindow, appSettings *SettingsStor
 			lg.Fatal(err)
 		}
 
-		cntr, err := createBackupSourceBlock2(win, false, profileSettings, profileID,
+		cntr, err := createBackupSourceBlock2(win, profileSettings, profileID,
 			sourceID, prefRow, validator, profileChanged)
 		if err != nil {
 			lg.Fatal(err)
@@ -1537,12 +1638,16 @@ func ProfilePreferencesNew(win *gtk.ApplicationWindow, appSettings *SettingsStor
 
 // AdvancedPreferencesNew create preference dialog with "Advanced" page, where controls
 // bound to GLib Setting object for save/restore functionality.
-func AdvancedPreferencesNew(appSettings *SettingsStore) (*gtk.Container, error) {
+func AdvancedPreferencesNew(appSettings *SettingsStore, prefRow *PreferenceRow) (*gtk.Container, error) {
 	box, err := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 6)
 	if err != nil {
 		return nil, err
 	}
 	SetAllMargins(box, 18)
+
+	if prefRow != nil {
+		prefRow.Page = &box.Container
+	}
 
 	bh := appSettings.NewBindingHelper()
 
@@ -1909,16 +2014,6 @@ func AdvancedPreferencesNew(appSettings *SettingsStore) (*gtk.Container, error) 
 	}
 
 	return &box.Container, nil
-
-	//bh := NewBindingHelper(gsSettings)
-	_, err = box.Connect("destroy", func() {
-		//bh.Unbind()
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return &box.Container, nil
 }
 
 // ProfileStatusState is used to denote profile validating status.
@@ -1935,24 +2030,50 @@ type ProfileStatus struct {
 	Description string
 }
 
-// PreferenceRow keeps here extra data for each page of multi-page preference dialog.
+type RestartService struct {
+	Revealer *gtk.Revealer
+}
+
+func (v *RestartService) show(show bool) {
+	if show {
+		v.Revealer.SetRevealChild(true)
+		v.Revealer.ShowAll()
+	} else {
+		v.Revealer.SetRevealChild(false)
+	}
+}
+
+type RsyncSource struct {
+	// Keep delete RSYNC source module button
+	// to enable/disable it, depending on module count.
+	DeleteBtn *gtk.Button
+	IndexLbl  *gtk.Label
+	Index     int
+}
+
+// PreferenceRow keeps extra data globally
+// for each page over multi-page preference dialog.
+// In some cases implement some kind of DOM support
+// to enable/disable controls, show statuses, etc.
 type PreferenceRow struct {
 	sync.RWMutex
-	ID        string
-	name      string
-	Title     string
-	Row       *gtk.ListBoxRow
-	Container *gtk.Box
-	Label     *gtk.Label
-	Icon      *gtk.Image
-	Page      *gtk.Container
-	Profile   bool
-	Errors    map[uintptr]ProfileStatus
+	ID             string
+	name           string
+	Title          string
+	Row            *gtk.ListBoxRow
+	Container      *gtk.Box
+	Label          *gtk.Label
+	Icon           *gtk.Image
+	Page           *gtk.Container
+	Profile        bool
+	RestartService *RestartService
+	RsyncSources   map[uintptr]*RsyncSource
+	Errors         map[uintptr]ProfileStatus
 }
 
 // PreferenceRowNew instantiate new PreferenceRow object.
 func PreferenceRowNew(id, title string, page *gtk.Container,
-	profile bool) (*PreferenceRow, error) {
+	profile, restartService bool) (*PreferenceRow, error) {
 
 	box, err := gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 0)
 	if err != nil {
@@ -1975,10 +2096,11 @@ func PreferenceRowNew(id, title string, page *gtk.Container,
 	row.Add(box)
 
 	errors := make(map[uintptr]ProfileStatus)
+	rsyncSources := make(map[uintptr]*RsyncSource)
 
 	pr := &PreferenceRow{ID: id, Title: title, Row: row,
-		Container: box, Label: lbl, Page: page,
-		Profile: profile, Errors: errors}
+		Container: box, Label: lbl, Page: page, Profile: profile,
+		Errors: errors, RsyncSources: rsyncSources}
 
 	pr.SetName(title)
 
@@ -2012,18 +2134,111 @@ func (v *PreferenceRow) GetName() string {
 	return v.name
 }
 
+// AddStatus add error status to the list box item.
+func (v *PreferenceRow) AddStatus(sourceID uintptr,
+	status ProfileStatusState, description string) error {
+
+	v.Lock()
+	defer v.Unlock()
+
+	lastStatus := v.getCurrentStatus()
+
+	v.Errors[sourceID] = ProfileStatus{Status: status, Description: description}
+
+	err2 := v.updateErrorStatus(lastStatus)
+	if err2 != nil {
+		return err2
+	}
+	return nil
+}
+
+// RemoveStatus removes error status from the list box item.
+func (v *PreferenceRow) RemoveStatus(sourceID uintptr) error {
+	v.Lock()
+	defer v.Unlock()
+
+	lastStatus := v.getCurrentStatus()
+
+	delete(v.Errors, sourceID)
+
+	err2 := v.updateErrorStatus(lastStatus)
+	if err2 != nil {
+		return err2
+	}
+	return nil
+}
+
+// ActivateRestartService show/hide restart command panel
+// located at the top of the form.
+func (v *PreferenceRow) ActivateRestartService(activate bool) error {
+	if v.RestartService != nil {
+		v.RestartService.show(activate)
+	}
+	return nil
+}
+
+// EnableDisableDeleteButtonsAndRecalculateIndexes enable/dsiable delete button
+// for RSYNC module (doesn't allow to delete last module).
+// Additionally recalculate module's indexes
+func (v *PreferenceRow) EnableDisableDeleteButtonsAndRecalculateIndexes() {
+	labels := []struct {
+		DeleteBtn *gtk.Button
+		IndexLbl  *gtk.Label
+		Index     int
+	}{}
+	for _, rs := range v.RsyncSources {
+		labels = append(labels, struct {
+			DeleteBtn *gtk.Button
+			IndexLbl  *gtk.Label
+			Index     int
+		}{DeleteBtn: rs.DeleteBtn, IndexLbl: rs.IndexLbl, Index: rs.Index})
+	}
+	sort.SliceStable(labels, func(i, j int) bool {
+		return labels[i].Index < labels[j].Index
+	})
+	j := 0
+	for _, rs := range labels {
+		markup := NewMarkup(MARKUP_SIZE_LARGER, 0, 0,
+			"", "", NewMarkup(MARKUP_SIZE_LARGER, 0, 0,
+				"", "", NewMarkup(MARKUP_SIZE_LARGER, 0, 0,
+					"", "", NewMarkup(MARKUP_SIZE_LARGER, 0, 0,
+						"", "", NewMarkup(MARKUP_SIZE_LARGER, 0, 0,
+							strconv.Itoa(j+1), "")))))
+		rs.DeleteBtn.SetSensitive(len(v.RsyncSources) > 1)
+		rs.IndexLbl.SetText(markup.String())
+		rs.IndexLbl.SetUseMarkup(true)
+		j++
+	}
+}
+
+// GetLastRsyncModuleIndex extract maximum Index field value,
+// that exists for RSYNC modules in this specific backup profile.
+func (v *PreferenceRow) GetLastRsyncModuleIndex() int {
+	j := -1
+	for _, rs := range v.RsyncSources {
+		if rs.Index > j {
+			j = rs.Index
+		}
+	}
+	return j
+}
+
 // setThemedIcon assign icon to the right side of the list box item.
 func (v *PreferenceRow) setThemedIcon(themedName string, cssClasses []string) error {
 	img, err := gtk.ImageNew()
 	if err != nil {
 		return err
 	}
-	AddStyleClasses(&img.Widget, cssClasses)
+	err = AddStyleClasses(&img.Widget, cssClasses)
+	if err != nil {
+		return err
+	}
 	img.SetFromIconName(themedName, gtk.ICON_SIZE_BUTTON)
 	v.assignImage(img)
 	return nil
 }
 
+/*
 // setAssetsIconAnimation assign icon to the right side of the list box item.
 func (v *PreferenceRow) setAssetsIconAnimation(assetName string, resizeToWidth, resizeToHeight int) error {
 	img, err := AnimationImageFromAssetsNewWithResize(assetName, resizeToWidth, resizeToHeight)
@@ -2040,10 +2255,14 @@ func (v *PreferenceRow) setAssetsIcon(assetName string, cssClasses []string) err
 	if err != nil {
 		return err
 	}
-	AddStyleClasses(&img.Widget, cssClasses)
+	err = AddStyleClasses(&img.Widget, cssClasses)
+	if err != nil {
+		return err
+	}
 	v.assignImage(img)
 	return nil
 }
+*/
 
 func (v *PreferenceRow) assignImage(image *gtk.Image) {
 	MustIdleAdd(func() {
@@ -2112,7 +2331,6 @@ func (v *PreferenceRow) updateErrorStatus(lastStatus ProfileStatusState) error {
 			markup := NewMarkup(0, MARKUP_COLOR_SKY_BLUE, 0,
 				locale.T(MsgPrefDlgSourceRsyncValidatingHint, nil), nil)
 			v.setTooltipMarkup(markup.String())
-			// err := v.setAssetsIconAnimation(ASSET_SYNCHRONIZING_ANIMATED_64x64_ICON, 16, 16)
 			err := v.setThemedIcon(STOCK_SYNCHRONIZING_ICON, []string{"image-spin"})
 			if err != nil {
 				lg.Fatal(err)
@@ -2133,40 +2351,6 @@ func (v *PreferenceRow) updateErrorStatus(lastStatus ProfileStatusState) error {
 				v.clearIcon()
 			})
 		}
-	}
-	return nil
-}
-
-// AddStatus add error status to the list box item.
-func (v *PreferenceRow) AddStatus(sourceID uintptr,
-	status ProfileStatusState, description string) error {
-
-	v.Lock()
-	defer v.Unlock()
-
-	lastStatus := v.getCurrentStatus()
-
-	v.Errors[sourceID] = ProfileStatus{Status: status, Description: description}
-
-	err2 := v.updateErrorStatus(lastStatus)
-	if err2 != nil {
-		return err2
-	}
-	return nil
-}
-
-// RemoveStatus removes error status from the list box item.
-func (v *PreferenceRow) RemoveStatus(sourceID uintptr) error {
-	v.Lock()
-	defer v.Unlock()
-
-	lastStatus := v.getCurrentStatus()
-
-	delete(v.Errors, sourceID)
-
-	err2 := v.updateErrorStatus(lastStatus)
-	if err2 != nil {
-		return err2
 	}
 	return nil
 }
@@ -2239,7 +2423,7 @@ func addProfilePage(win *gtk.ApplicationWindow, profileID string, initProfileNam
 	lbSide *gtk.ListBox, pages *gtk.Stack, selectNew bool, profileChanged func()) error {
 
 	prefRow, err := PreferenceRowNew(profileID,
-		locale.T(MsgPrefDlgGeneralProfileTabName, nil), nil, true)
+		locale.T(MsgPrefDlgGeneralProfileTabName, nil), nil, true, false)
 	if err != nil {
 		return err
 	}
@@ -2264,17 +2448,20 @@ func addProfilePage(win *gtk.ApplicationWindow, profileID string, initProfileNam
 
 // CreatePreferenceDialog creates multi-page preference dialog
 // with save/restore functionality to/from the GLib Setting object.
-func CreatePreferenceDialog(settingsID, settingsPath string, app *gtk.Application,
+func CreatePreferenceDialog(settingsID, settingsPath string, mainWin *gtk.ApplicationWindow,
 	profileChanged func()) (*gtk.ApplicationWindow, error) {
 
-	parentWin := app.GetActiveWindow()
+	app, err := mainWin.GetApplication()
+	if err != nil {
+		return nil, err
+	}
 	win, err := gtk.ApplicationWindowNew(app)
 	if err != nil {
 		return nil, err
 	}
 
-	// Settings
-	win.SetTransientFor(parentWin)
+	// General window settings
+	win.SetTransientFor(mainWin)
 	win.SetDestroyWithParent(false)
 	win.SetShowMenubar(false)
 	appSettings, err := NewSettingsStore(settingsID, settingsPath, nil)
@@ -2376,27 +2563,27 @@ func CreatePreferenceDialog(settingsID, settingsPath string, app *gtk.Applicatio
 		}
 	}
 
-	gp, err := GeneralPreferencesNew(appSettings)
+	pr, err = PreferenceRowNew("General_ID", locale.T(MsgPrefDlgGeneralTabName, nil), nil, false, true)
+	if err != nil {
+		return nil, err
+	}
+	gp, err := GeneralPreferencesNew(win, appSettings, &mainWin.ActionMap, pr)
 	if err != nil {
 		return nil, err
 	}
 	pages.AddTitled(gp, "General_ID", locale.T(MsgPrefDlgGeneralTabName, nil))
-	pr, err = PreferenceRowNew("General_ID", locale.T(MsgPrefDlgGeneralTabName, nil), gp, false)
-	if err != nil {
-		return nil, err
-	}
 	list.Append(pr)
 	lbSide.Add(pr.Row)
 
-	ap, err := AdvancedPreferencesNew(appSettings)
+	pr, err = PreferenceRowNew("Advanced_ID", locale.T(MsgPrefDlgAdvancedTabName, nil), nil, false, true)
+	if err != nil {
+		return nil, err
+	}
+	ap, err := AdvancedPreferencesNew(appSettings, pr)
 	if err != nil {
 		return nil, err
 	}
 	pages.AddTitled(ap, "Advanced_ID", locale.T(MsgPrefDlgAdvancedTabName, nil))
-	pr, err = PreferenceRowNew("Advanced_ID", locale.T(MsgPrefDlgAdvancedTabName, nil), ap, false)
-	if err != nil {
-		return nil, err
-	}
 	list.Append(pr)
 	lbSide.Add(pr.Row)
 
@@ -2465,6 +2652,7 @@ func CreatePreferenceDialog(settingsID, settingsPath string, app *gtk.Applicatio
 	}
 	bButtons.PackStart(btnAddProfile, false, false, 0)
 
+	// Function to manage (enable/disable) "delete backup profile" button.
 	updateBtnDeleteProfileSensitive := func(deleteBtn *gtk.Button, row *gtk.ListBoxRow) {
 		var pr *PreferenceRow
 		if row != nil {

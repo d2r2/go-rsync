@@ -1,3 +1,14 @@
+//--------------------------------------------------------------------------------------------------
+// This file is a part of Gorsync Backup project (backup RSYNC frontend).
+// Copyright (c) 2017-2020 Denis Dyakov <denis.dyakov@gmail.com>
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+// BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//--------------------------------------------------------------------------------------------------
+
 package backup
 
 import (
@@ -36,7 +47,7 @@ type Progress struct {
 	EndBackupTime   time.Time
 
 	// Previous backup sessions found to use for deduplicaton
-	PrevBackups *PrevBackups
+	PreviousBackups *PreviousBackups
 
 	RootDest     string
 	BackupFolder string
@@ -85,7 +96,8 @@ func (v *Progress) GetTotalTimeTaken() time.Duration {
 // CalcTimePassedAndETA count total time passed in backup stage (2nd stage)
 // and compute ETA (estimated time of arrival) - time left.
 func (v *Progress) CalcTimePassedAndETA(plan *Plan) (time.Duration, *time.Duration) {
-	timePassed := time.Now().Sub(v.StartBackupTime)
+	// timePassed := time.Now().Sub(v.StartBackupTime)
+	timePassed := time.Since(v.StartBackupTime)
 	if v.SizeBackedUp() > 0 {
 		totalTime := float32(timePassed) * float32(plan.BackupSize) /
 			float32(v.SizeBackedUp())
@@ -138,14 +150,19 @@ func (v *Progress) LeftToBackup(plan *Plan) core.FolderSize {
 	return left
 }
 
-func (v *Progress) PrevBackupsUsed(prevBackups *PrevBackups) {
-	v.PrevBackups = prevBackups
+// PreviousBackupsUsed save previous backup sessions found for deduplication to activate.
+func (v *Progress) PreviousBackupsUsed(prevBackups *PreviousBackups) {
+	v.PreviousBackups = prevBackups
 }
 
+// SetRootDestination set absolute destination path,
+// where backup session will create it new subfolder and store data.
 func (v *Progress) SetRootDestination(rootDestPath string) {
 	v.RootDest = rootDestPath
 }
 
+// SetBackupFolder set newly created backup session subfolder,
+// where copied data and logs will be stored.
 func (v *Progress) SetBackupFolder(backupFolder string) error {
 	v.BackupFolder = backupFolder
 	// relocate log files from one destination path to another
@@ -154,6 +171,8 @@ func (v *Progress) SetBackupFolder(backupFolder string) error {
 	return err
 }
 
+// GetBackupFullPath return absolute destination path with backup
+// session subfolder concatenated.
 func (v *Progress) GetBackupFullPath(backupFolder string) string {
 	backupFullPath := filepath.Join(v.RootDest, backupFolder)
 	return backupFullPath
@@ -283,7 +302,12 @@ func (v *Progress) getTotalStatistics(plan *Plan) ([]string, error) {
 	wli(&b, 2, f("%s %s", core.GetAppFullTitle(), core.GetAppVersion()))
 	version, protocol, err := rsync.GetRsyncVersion()
 	if err != nil {
-		return nil, err
+		if rsync.IsExtractVersionAndProtocolError(err) {
+			version = "?"
+			protocol = version
+		} else {
+			return nil, err
+		}
 	}
 	wli(&b, 2, locale.T(MsgRsyncInfo, struct{ RSYNCDetectedVer, RSYNCDetectedProtocol string }{
 		RSYNCDetectedVer: version, RSYNCDetectedProtocol: protocol}))
@@ -328,8 +352,8 @@ func (v *Progress) getTotalStatistics(plan *Plan) ([]string, error) {
 	wli(&b, 3, locale.T(MsgLogStatisticsBackupStageDestinationPath, struct{ Path string }{
 		Path: backupFolder}))
 
-	if len(v.PrevBackups.Backups) > 0 && plan.Config.usePreviousBackupEnabled() {
-		paths, err := core.GetRelativePaths(v.RootDest, v.PrevBackups.GetDirPaths())
+	if len(v.PreviousBackups.Backups) > 0 && plan.Config.usePreviousBackupEnabled() {
+		paths, err := core.GetRelativePaths(v.RootDest, v.PreviousBackups.GetDirPaths())
 		if err != nil {
 			return nil, err
 		}
@@ -338,8 +362,8 @@ func (v *Progress) getTotalStatistics(plan *Plan) ([]string, error) {
 		for _, path := range paths {
 			wli(&b, 4, path)
 		}
-	} else if len(v.PrevBackups.Backups) > 0 && !plan.Config.usePreviousBackupEnabled() {
-		paths, err := core.GetRelativePaths(v.RootDest, v.PrevBackups.GetDirPaths())
+	} else if len(v.PreviousBackups.Backups) > 0 && !plan.Config.usePreviousBackupEnabled() {
+		paths, err := core.GetRelativePaths(v.RootDest, v.PreviousBackups.GetDirPaths())
 		if err != nil {
 			return nil, err
 		}

@@ -13,9 +13,30 @@
 # You should have received a copy of the CC0 Public Domain Dedication along with this software.
 # If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 
+# Install in advance 'fmp' application according to: https://fpm.readthedocs.io/en/latest/installing.html
+
 # !!! This script is a part of distribution packaging system !!!
 # !!! Script work together with  gs_schema_install.sh/..._uninstall.sh to [de]install app GLIB schema file !!!
 # !!! Change with great care, do not break it !!!
+
+get_desktop_entry_file()
+{
+    local EMBEDDED
+    EMBEDDED=$(cat << EndOfMsg
+[Desktop Entry]
+Name=Gorsync Backup
+Comment=Easy-to-use backup app based on Rsync console utility
+Exec=gorsync
+Icon=media-tape-symbolic
+Type=Application
+Encoding=UTF-8
+Terminal=false
+Categories=GNOME;GTK;Utility;System;
+Keywords=backup;rsync;
+EndOfMsg
+)
+    echo "${EMBEDDED}"
+}
 
 PROG=$(basename $0)
 VERSION=v0.3
@@ -85,16 +106,22 @@ while [ $# -gt 0 ]; do
     shift
 done
 
+echo "************************************************************************"
+echo "This script will generate linux distribution packages using fpm utility."
+echo "You must install fpm in advance to use this script:"
+echo "https://fpm.readthedocs.io/en/latest/installing.html"
+echo "************************************************************************"
 
 
 TEMPDIR=/tmp/gorsync_build_app
 DISTRIB=distrib
 SCRIPTS=scripts
-ITERATION='1'
 APP_NAME='gorsync'
 APP_URL="https://gorsync.github.io"
 AUTHOR="Denis Dyakov <denis.dyakov@gmail.com>"
 LICENSE="GPL3"
+
+echo -e "Use path to keep data for package generation: ${TEMPDIR}\n"
 
 systems=( \
     # for Archlinux
@@ -123,6 +150,15 @@ fpm_packages=( \
     "rpm" \
     # for FreeBSD
     "freebsd")
+warnings=( \
+    # for Archlinux
+    "" \
+    # for Debian, Ubuntu
+    "" \
+    # for Redhat, Centos
+    "" \
+    # for FreeBSD
+    "Application binary '${APP_NAME}' generated on Linux is not valid for FreeBSD.\n\tBuild it natively on FreeBSD, substitute and re-run with --skip-app-build option.")
 fpm_dependencies=( \
     # for Archlinux
     "--depends rsync --depends glib2 --depends gtk3 --depends libnotify" \
@@ -158,7 +194,17 @@ do
         "$TEMPDIR/${systems[i]}/$SCRIPTS/gs_schema_install.sh"
     cp "$PARENT_DIR/ui/gtkui/gs_schema_uninstall.sh" "$TEMPDIR/${systems[i]}/$SCRIPTS"
 
-    APP_VERSION=`head -1 ./version`
+    # Form application version from latest GIT tag/release.
+    # Extract latest GIT tag.
+    GIT_TAG=`git describe --tags --abbrev=0`
+    # Extract number of commits passed from last GIT release.
+    COMMITS_AFTER=$(git rev-list ${GIT_TAG}..HEAD --count)
+    # Remove 'v' char from tag, if present
+    [[ ${GIT_TAG:0:1} == "v" ]] && GIT_TAG=${GIT_TAG:1}
+    # Combine last GIT tag and number of commits since, if applicable, to build application version.
+    APP_VERSION=$GIT_TAG
+    # Add extra 1 to increment build number (to start index from 1).
+    ITERATION=$(($COMMITS_AFTER+1))
 
     APP_BUILD_SUCCESSFULL=true
     if [ -z $SKIP_APP_BUILD ]; then
@@ -172,7 +218,7 @@ do
         fi
     fi
     cd "$SAVE_DIR"
-    cp ./gorsync.desktop "$TEMPDIR/${systems[i]}/$DISTRIB/${prefixes[i]}/share/applications"
+    echo "$(get_desktop_entry_file)" > "$TEMPDIR/${systems[i]}/$DISTRIB/${prefixes[i]}/share/applications/gorsync.desktop"
 
     if [ $APP_BUILD_SUCCESSFULL = true ]; then
 
@@ -192,6 +238,13 @@ do
             --url "$APP_URL" \
             --license "$LICENSE"
         #    --config-files /etc
+
+        # Replacing single-spaces with empty via contruction ${MYSTRING//in/by} (or) ${MYSTRING//in}
+        if [ -z ${warnings[i]// } ]; then
+            :
+        else
+            echo -e "WARNING: ${warnings[i]}"
+        fi
 
         echo -e "...${systems[i]} done.\n"
     else

@@ -1,3 +1,14 @@
+//--------------------------------------------------------------------------------------------------
+// This file is a part of Gorsync Backup project (backup RSYNC frontend).
+// Copyright (c) 2017-2020 Denis Dyakov <denis.dyakov@gmail.com>
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+// BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//--------------------------------------------------------------------------------------------------
+
 package rsync
 
 import (
@@ -12,8 +23,8 @@ import (
 	shell "github.com/d2r2/go-shell"
 )
 
-// RSYNC_CMD contains RSYNC console utility name to run.
-const RSYNC_CMD = "rsync"
+// RSYNC_APP_CMD contains RSYNC console utility system name to run.
+const RSYNC_APP_CMD = "rsync"
 
 // RunRsyncWithRetry run RSYNC utility with retry attempts.
 func RunRsyncWithRetry(ctx context.Context, options *Options, log *Logging, stdOut *bytes.Buffer,
@@ -66,15 +77,15 @@ func RunRsyncWithRetry(ctx context.Context, options *Options, log *Logging, stdO
 	return
 }
 
-// IsInstalled verify, that RSYNC application present in the system.
+// IsInstalled do verify that RSYNC application present in the system.
 func IsInstalled() error {
-	app := shell.NewApp(RSYNC_CMD)
+	app := shell.NewApp(RSYNC_APP_CMD)
 	return app.CheckIsInstalled()
 }
 
 // GetRsyncVersion run RSYNC to get version and protocol.
 func GetRsyncVersion() (version string, protocol string, err error) {
-	app := shell.NewApp(RSYNC_CMD, "--version")
+	app := shell.NewApp(RSYNC_APP_CMD, "--version")
 	var stdOut, stdErr bytes.Buffer
 	exitCode := app.Run(&stdOut, &stdErr)
 	if exitCode.Error != nil {
@@ -83,8 +94,10 @@ func GetRsyncVersion() (version string, protocol string, err error) {
 	scanner := bufio.NewScanner(&stdOut)
 	scanner.Split(bufio.ScanLines)
 
-	// Expression should parse a line: rsync  version 3.1.3  protocol version 31
-	re := regexp.MustCompile(`version\s+(?P<version>\d+\.\d+(\.\d+)?)(\s+protocol\s+version\s+(?P<protocol>\d+))?`)
+	// Expression should parse a line variant:
+	//		rsync  version 3.1.3  protocol version 31
+	//		rsync  version v3.2.3  protocol version 31
+	re := regexp.MustCompile(`version\s+v?(?P<version>\d+\.\d+(\.\d+)?)(\s+protocol\s+version\s+(?P<protocol>\d+))?`)
 	for scanner.Scan() {
 		line := scanner.Text()
 		m := core.FindStringSubmatchIndexes(re, line)
@@ -103,6 +116,12 @@ func GetRsyncVersion() (version string, protocol string, err error) {
 			}
 			break
 		}
+	}
+	// Extracted RSYNC version cannot be empty.
+	if version == "" {
+		// Return error which should be treated as a warning in the main,
+		// when RSYNC version (and protocol) is undetected for some reason.
+		return "", "", &ExtractVersionAndProtocolError{}
 	}
 	return version, protocol, nil
 }
@@ -131,7 +150,7 @@ func runSystemRsync(ctx context.Context, password *string,
 		}
 	}
 
-	app := shell.NewApp(RSYNC_CMD, args...)
+	app := shell.NewApp(RSYNC_APP_CMD, args...)
 	var passwd string
 	if password != nil {
 		passwd = *password
@@ -160,7 +179,7 @@ func runSystemRsync(ctx context.Context, password *string,
 	case st := <-waitCh:
 		// Enable RSYNC log output
 		if logEnabled {
-			logBuf.WriteString(RSYNC_CMD)
+			logBuf.WriteString(RSYNC_APP_CMD)
 			if len(args) > 0 {
 				logBuf.WriteString(" ")
 				logBuf.WriteString(strings.Join(args, " "))
@@ -183,5 +202,4 @@ func runSystemRsync(ctx context.Context, password *string,
 		}
 		return nil
 	}
-	return nil
 }

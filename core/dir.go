@@ -1,3 +1,14 @@
+//--------------------------------------------------------------------------------------------------
+// This file is a part of Gorsync Backup project (backup RSYNC frontend).
+// Copyright (c) 2017-2020 Denis Dyakov <denis.dyakov@gmail.com>
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+// BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//--------------------------------------------------------------------------------------------------
+
 package core
 
 import (
@@ -20,7 +31,7 @@ type DirMetrics struct {
 	// child folders with their content.
 	FullSize *FolderSize
 	// Flag which means, that folder contain special file
-	// which serves as tag to do not backup this folder.
+	// which serves as signal to skip backup this folder.
 	IgnoreToBackup bool
 	// Flag which means, that this folder already marked
 	// as "measured" in traverse path search.
@@ -33,7 +44,7 @@ type DirMetrics struct {
 // Dir is a "tree data structure" to describe folder's tree
 // received from the source in 1st pass of backup process to measure
 // counts/sizes and to predict time necessary for backup process (ETA).
-// https://en.wikipedia.org/wiki/Tree_(data_structure)
+// https://en.wikipedia.org/wiki/Tree_%28data_structure%29
 type Dir struct {
 	Paths   SrcDstPath
 	Name    string
@@ -62,36 +73,49 @@ func BuildDirTree(paths SrcDstPath, ignoreBackupFileSigName string) (*Dir, error
 	return root, nil
 }
 
+// GetTotalSize calculates total size of data
+// to backup, including all subfolders.
 func (v *Dir) GetTotalSize() FolderSize {
-	// use nested call since it's recursive
+	// use nested call to make recursive calculations
 	return getTotalSize(v)
 }
 
+// GetIgnoreSize calculates total size of data
+// which marked as "skip to backup" including all subfolders.
 func (v *Dir) GetIgnoreSize() FolderSize {
-	// use nested call since it's recursive
+	// use nested call to make recursive calculations
 	return getIgnoreSize(v)
 }
 
+// GetFullBackupSize calculates total size of data
+// which marked to backup "full content".
 func (v *Dir) GetFullBackupSize() FolderSize {
-	// use nested call since it's recursive
+	// use nested call to make recursive calculations
 	return getFullBackupSize(v)
 }
 
+// GetContentBackupSize calculates total size of data
+// which marked to backup "local folder content".
 func (v *Dir) GetContentBackupSize() FolderSize {
-	// use nested call since it's recursive
+	// use nested call to make recursive calculations
 	return getContentBackupSize(v)
 }
 
+// GetFoldersCount return total folder count
+// in this directory tree.
 func (v *Dir) GetFoldersCount() int {
-	// use nested call since it's recursive
+	// use nested call to make recursive calculations
 	return getFoldersCount(v)
 }
 
+// GetFoldersIgnoreCount return total folder count
+// to "skip to backup" in this directory tree.
 func (v *Dir) GetFoldersIgnoreCount() int {
-	// use nested call since it's recursive
+	// use nested call to make recursive calculations
 	return getFoldersIgnoreCount(v)
 }
 
+/*
 func containsMeasuredDir(dir *Dir) bool {
 	if dir.Metrics.Measured {
 		return true
@@ -115,6 +139,7 @@ func containsNonMeasuredDir(dir *Dir) bool {
 	}
 	return false
 }
+*/
 
 func getTotalSize(dir *Dir) FolderSize {
 	var size FolderSize

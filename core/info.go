@@ -1,3 +1,14 @@
+//--------------------------------------------------------------------------------------------------
+// This file is a part of Gorsync Backup project (backup RSYNC frontend).
+// Copyright (c) 2017-2020 Denis Dyakov <denis.dyakov@gmail.com>
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+// BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//--------------------------------------------------------------------------------------------------
+
 package core
 
 import (
@@ -10,12 +21,28 @@ import (
 	"github.com/davecgh/go-spew/spew"
 )
 
+// AppRunMode signify what happens, when app
+// will be closed. With this type standard
+// behavior might be changed and app will be
+// started again.
+type AppRunMode int
+
+const (
+	// AppRegularRun - regular run, app will be closed on exit.
+	AppRegularRun AppRunMode = iota
+	// AppRunReload - app will be reinitialized and restarted again.
+	// This behavior allow to automatically restart app when some
+	// settings change require app to reload.
+	AppRunReload
+)
+
 // contain version+buildnum
 // initialized with option:
 // -ldflags "-X main.version `head -1 version` -X main.buildnum `date -u +%Y%m%d%H%M%S`"
 var (
-	_buildnum string
-	_version  string
+	_buildnum   string
+	_version    string
+	_appRunMode AppRunMode
 )
 
 // SetVersion save application version provided with compile via -ldflags CLI parameter.
@@ -26,6 +53,10 @@ func SetVersion(version string) {
 // SetBuildNum save application build number provided with compile via -ldflags CLI parameter.
 func SetBuildNum(buildnum string) {
 	_buildnum = buildnum
+}
+
+func SetAppRunMode(appRunMode AppRunMode) {
+	_appRunMode = appRunMode
 }
 
 // Pass in parameter datetime
@@ -45,12 +76,16 @@ func generateBuildNum() string {
 	return _buildnum
 }
 
+func GetAppRunMode() AppRunMode {
+	return _appRunMode
+}
+
 // GetAppVersion returns string representation of application version.
 func GetAppVersion() string {
 	return spew.Sprintf("v%s", _version)
 }
 
-// GetAppArchitecture returns application architecture.
+// GetAppArchitecture1 returns application architecture.
 func GetAppArchitecture() string {
 	return runtime.GOARCH
 }

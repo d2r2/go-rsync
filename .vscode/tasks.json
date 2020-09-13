@@ -1,0 +1,51 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build program DEV",
+            "type": "shell",
+            "command": "${workspaceFolder}/gorsync_build.sh",
+            "options": {
+                "env": {
+                    "GOPATH": "${config:go.gopath}"
+                },
+                "cwd": "${workspaceFolder}"
+            }
+        },
+        {
+            "label": "Build program PROD",
+            "type": "shell",
+            "command": "${workspaceFolder}/gorsync_build.sh --buildtype Release",
+            "options": {
+                "env": {
+                    "GOPATH": "${config:go.gopath}"
+                },
+                "cwd": "${workspaceFolder}"
+            }
+        },
+        {
+            "label": "Create archive package (with sources)",
+            "type": "shell",
+            "command": "${workspaceFolder}/packaging/build_packages/create_archive_source_package.sh",
+            "options": {
+                "env": {
+                    "GOPATH": "${config:go.gopath}"
+                },
+                "cwd": "${workspaceFolder}/packaging/build_packages"
+            }
+        },
+        {
+            "label": "Create installation packages (archlinux, redhat, debian, freebsd)",
+            "type": "shell",
+            "command": "${workspaceFolder}/packaging/build_packages/create_distrib_packages_with_fpm.sh",
+            "options": {
+                "env": {
+                    "GOPATH": "${config:go.gopath}"
+                },
+                "cwd": "${workspaceFolder}/packaging/build_packages"
+            }
+        }
+    ],
+}

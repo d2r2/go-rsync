@@ -1,3 +1,14 @@
+//--------------------------------------------------------------------------------------------------
+// This file is a part of Gorsync Backup project (backup RSYNC frontend).
+// Copyright (c) 2017-2020 Denis Dyakov <denis.dyakov@gmail.com>
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+// BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//--------------------------------------------------------------------------------------------------
+
 package rsync
 
 import (
@@ -17,6 +28,8 @@ func (v *ProcessTerminatedError) Error() string {
 	return locale.T(MsgRsyncProcessTerminatedError, nil)
 }
 
+// IsProcessTerminatedError check that error able to cast
+// to ProcessTerminatedError.
 func IsProcessTerminatedError(err error) bool {
 	if err != nil {
 		_, ok := err.(*ProcessTerminatedError)
@@ -75,6 +88,8 @@ func (v *CallFailedError) Error() string {
 		}{Description: v.Description, ExitCode: v.ExitCode})
 }
 
+// IsCallFailedError check that error able to cast
+// to CallFailedError.
 func IsCallFailedError(err error) bool {
 	if err != nil {
 		_, ok := err.(*CallFailedError)
@@ -116,4 +131,25 @@ func getRsyncExitCodeDesc(exitCode int) string {
 	} else {
 		return f("Undefined rsync exit code: %d", exitCode)
 	}
+}
+
+// ExtractVersionAndProtocolError denote a situation when attempt
+// to extract rsync version/protocol has failed, and
+// version and protocol are undefined.
+// This error is not critical (in the main) and should not lead to app failure.
+type ExtractVersionAndProtocolError struct {
+}
+
+func (v *ExtractVersionAndProtocolError) Error() string {
+	return locale.T(MsgRsyncExtractVersionAndProtocolError, nil)
+}
+
+// IsExtractVersionAndProtocolError check that error able to cast
+// to ExtractVersionAndProtocolError.
+func IsExtractVersionAndProtocolError(err error) bool {
+	if err != nil {
+		_, ok := err.(*ExtractVersionAndProtocolError)
+		return ok
+	}
+	return false
 }
