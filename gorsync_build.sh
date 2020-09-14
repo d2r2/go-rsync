@@ -65,14 +65,14 @@ if [ -n "$HAS_GNU_ENHANCED_GETOPT" ]; then
     echo "$PROG: usage error (use -h or --help for help)" >&2
     exit 2
   fi
-  ARGS=`getopt --name "$PROG" --long $LONG_OPTS --options $SHORT_OPTS -- "$@"`
+  ARGS=$(getopt --name "$PROG" --long $LONG_OPTS --options $SHORT_OPTS -- "$@")
 else
   # Use original getopt (no long option names, no whitespace, no sorting)
   if ! getopt $SHORT_OPTS "$@" >/dev/null; then
     echo "$PROG: usage error (use -h for help)" >&2
     exit 2
   fi    
-  ARGS=`getopt $SHORT_OPTS "$@"`
+  ARGS=$(getopt $SHORT_OPTS "$@")
 fi
 eval set -- $ARGS
 
@@ -97,7 +97,7 @@ done
 
 # Form application version from latest GIT tag/release.
 # Extract latest GIT tag.
-GIT_TAG=`git describe --tags --abbrev=0`
+GIT_TAG=$(git describe --tags --abbrev=0)
 # Extract number of commits passed from last GIT release.
 COMMITS_AFTER=$(git rev-list ${GIT_TAG}..HEAD --count)
 COMMIT_ID=$(git rev-parse --short=7 HEAD)
@@ -111,11 +111,12 @@ shopt -s nocasematch
 if [[ "$BUILD_TYPE" == "$RELEASE_TYPE" ]]; then
   echo "RELEASE type build in progress..."
   go run data/generate/generate.go && mv ./assets_vfsdata.go ./data
-  go build -v $RACE -ldflags="-X main.version=$APP_VERSION -X main.buildnum=`date -u +%Y%m%d%H%M%S`" -tags "gorsync_rel $BUILD_TAGS" $OUTPUT gorsync.go
+  # Add extra options here (-s -w), to decrease release binary size, read here https://golang.org/cmd/link/
+  go build -v $RACE -ldflags="-X main.version=$APP_VERSION -X main.buildnum=$(date -u +%Y%m%d%H%M%S) -s -w" -tags "gorsync_rel $BUILD_TAGS" $OUTPUT gorsync.go
 else
   [[ -z "$BUILD_TYPE" ]] || [[ "$BUILD_TYPE" == "$DEV_TYPE" ]] || echo "WARNING: unknown build type provided: $BUILD_TYPE"
   echo "DEVELOPMENT type build in progress..."
-  go build -v $RACE -ldflags="-X main.version=$APP_VERSION -X main.buildnum=`date -u +%Y%m%d%H%M%S`" -tags "$BUILD_TAGS" $OUTPUT gorsync.go
+  go build -v $RACE -ldflags="-X main.version=$APP_VERSION -X main.buildnum=$(date -u +%Y%m%d%H%M%S)" -tags "$BUILD_TAGS" $OUTPUT gorsync.go
 fi
 shopt -u nocasematch
 
