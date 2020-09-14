@@ -4,14 +4,15 @@ go:
 #  - "1.6"
 #  - "1.7"
   - "1.10"
-#  - "tip"
+  - "1.15"
+  - "tip"
 
 env:
   - GOARCH=amd64
 
 sudo: false
-#dist: trusty
 dist: xenial
+dist: focal
 
 #services:
 #  - docker

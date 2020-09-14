@@ -19,6 +19,8 @@
 # !!! Script work together with  gs_schema_install.sh/..._uninstall.sh to [de]install app GLIB schema file !!!
 # !!! Change with great care, do not break it !!!
 
+# Get desktop file content to register application in
+# Linux GUI environment.
 get_desktop_entry_file()
 {
     local EMBEDDED
@@ -80,14 +82,14 @@ if [ -n "$HAS_GNU_ENHANCED_GETOPT" ]; then
     echo "$PROG: usage error (use -h or --help for help)" >&2
     exit 2
   fi
-  ARGS=`getopt --name "$PROG" --long $LONG_OPTS --options $SHORT_OPTS -- "$@"`
+  ARGS=$(getopt --name "$PROG" --long $LONG_OPTS --options $SHORT_OPTS -- "$@")
 else
   # Use original getopt (no long option names, no whitespace, no sorting)
   if ! getopt $SHORT_OPTS "$@" >/dev/null; then
     echo "$PROG: usage error (use -h for help)" >&2
     exit 2
   fi    
-  ARGS=`getopt $SHORT_OPTS "$@"`
+  ARGS=$(getopt $SHORT_OPTS "$@")
 fi
 eval set -- $ARGS
 
@@ -196,7 +198,7 @@ do
 
     # Form application version from latest GIT tag/release.
     # Extract latest GIT tag.
-    GIT_TAG=`git describe --tags --abbrev=0`
+    GIT_TAG=$(git describe --tags --abbrev=0)
     # Extract number of commits passed from last GIT release.
     COMMITS_AFTER=$(git rev-list ${GIT_TAG}..HEAD --count)
     # Remove 'v' char from tag, if present
@@ -234,6 +236,7 @@ do
             ${fpm_dependencies[i]} \
             --after-install "$TEMPDIR/${systems[i]}/$SCRIPTS/gs_schema_install.sh" \
             --before-remove "$TEMPDIR/${systems[i]}/$SCRIPTS/gs_schema_uninstall.sh" \
+            --conflicts "gorsync-git" \
             --maintainer "$AUTHOR" \
             --url "$APP_URL" \
             --license "$LICENSE"

@@ -25,7 +25,7 @@ echo "**************************************************************************
 APP_NAME='gorsync'
 # Form application version from latest GIT tag/release.
 # Extract latest GIT tag.
-GIT_TAG=`git describe --tags --abbrev=0`
+GIT_TAG=$(git describe --tags --abbrev=0)
 # Extract number of commits passed from last GIT release.
 COMMITS_AFTER=$(git rev-list ${GIT_TAG}..HEAD --count)
 # Remove 'v' char from tag, if present

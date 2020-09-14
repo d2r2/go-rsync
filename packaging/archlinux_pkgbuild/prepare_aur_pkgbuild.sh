@@ -6,6 +6,7 @@
 #	https://wiki.archlinux.org/index.php/Creating_packages
 #	https://wiki.archlinux.org/index.php/PKGBUILD
 #	https://wiki.archlinux.org/index.php/Makepkg
+#   https://wiki.archlinux.org/index.php/AUR_submission_guidelines
 # Examples aur packages with go sources:
 #	https://aur.archlinux.org/cgit/aur.git/tree/PKGBUILD?h=gometalinter-git
 #	https://aur.archlinux.org/cgit/aur.git/tree/PKGBUILD?h=vim-go
