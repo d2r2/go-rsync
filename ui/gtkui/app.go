@@ -26,6 +26,7 @@ import (
 	"github.com/d2r2/go-rsync/locale"
 	"github.com/d2r2/go-rsync/rsync"
 	shell "github.com/d2r2/go-shell"
+	"github.com/d2r2/gotk3/gdk"
 	"github.com/d2r2/gotk3/glib"
 	"github.com/d2r2/gotk3/gtk"
 	"github.com/davecgh/go-spew/spew"
@@ -98,18 +99,8 @@ func createQuitAction(win *gtk.Window, backupSync *BackupSessionStatus, supplime
 			}
 			// terminate all supplementary services if running
 			supplimentary.CancelAll()
-			// loop through and close all windows currently opened
-			for {
-				win2 := app.GetActiveWindow()
-				if win2 != nil {
-					win2.Close()
-					for gtk.EventsPending() {
-						gtk.MainIterationDo(true)
-					}
-				} else {
-					break
-				}
-			}
+			// close main window
+			win.Close()
 			// quit application
 			app.Quit()
 		}
@@ -264,8 +255,6 @@ func createPreferenceAction(mainWin *gtk.ApplicationWindow, profile *gtk.ComboBo
 			win.Show()
 
 			_, err = win.Connect("destroy", func(window *gtk.ApplicationWindow) {
-				win.Close()
-				win.Destroy()
 				lg.Debug("Destroy window")
 
 				changed := false
@@ -1331,6 +1320,50 @@ func CreateApp() (*gtk.Application, error) {
 	locale.SetLanguage(lang)
 
 	ctx, cancel := context.WithCancel(context.Background())
+
+	_, err = app.Application.Connect("startup", func(application *gtk.Application) {
+		// // Initialize GTK+ subsystem.
+		gtk.Init(nil)
+		lg.Info(locale.T(MsgMainAppSubsystemInitialized,
+			struct{ Subsystem string }{Subsystem: "GTK"}))
+
+		// Load GTK+ CSS styles from application assets (base.css file)
+		// and apply it globally at application level.
+		css, err := GetBaseApplicationCSS()
+		if err != nil {
+			lg.Fatal(err)
+		}
+		provider, err := gtk.CssProviderNew()
+		if err != nil {
+			lg.Fatal(err)
+		}
+		err = provider.LoadFromData(css)
+		if err != nil {
+			lg.Fatal(err)
+		}
+		screen, err := gdk.ScreenGetDefault()
+		if err != nil {
+			lg.Fatal(err)
+		}
+		// Select "APPLICATION" or "USER" priority to override global "THEME" settings.
+		gtk.AddProviderForScreen(screen, provider, gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = app.Application.Connect("shutdown", func(application *gtk.Application) {
+		// Initialize GTK+ subsystem.
+		// gtk.MainQuit()
+		// lg.Info("App shutdown")
+		// for gtk.EventsPending() {
+		// 	gtk.MainIterationDo(true)
+		// }
+	})
+	if err != nil {
+		return nil, err
+	}
 
 	_, err = app.Application.Connect("activate", func(application *gtk.Application) {
 		appSettings, err := NewSettingsStore(SETTINGS_SCHEMA_ID, SETTINGS_SCHEMA_PATH, nil)

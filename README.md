@@ -89,7 +89,13 @@ One can be found in AUR repository https://aur.archlinux.org/ by name "gorsync-g
 Releases information
 --------------------
 
-#### [v0.4.0](https://github.com/d2r2/go-rsync/releases/tag/v0.4.0) (latest release):
+#### [v0.4.1](https://github.com/d2r2/go-rsync/releases/tag/v0.4.1) (latest release):
+
+* It is a mostly the release 0.4.0 postfix.
+* Fix application reload code bug, which produce app panic exit time to time.
+* Some minor updates in code and translation.
+
+#### [v0.4.0](https://github.com/d2r2/go-rsync/releases/tag/v0.4.0):
 
 * Minimal Makefile configuration to support [make](https://www.gnu.org/software/make/) build approach.
 * Generate archive build file to bind to release assets, with 3rd party source dependencies injected to the `vendor` section of the project via [govendor](https://github.com/kardianos/govendor) tool. Since approach to use [govendor](https://github.com/kardianos/govendor) app is now considered obsolete, it will be replaced with Go modules ([go mod vendor](https://golang.org/ref/mod#go-mod-vendor)) in next releases.

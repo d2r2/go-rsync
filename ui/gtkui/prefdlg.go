@@ -174,7 +174,7 @@ func GeneralPreferencesNew(win *gtk.ApplicationWindow, appSettings *SettingsStor
 	bh.Bind(CFG_UI_LANGUAGE, cbUILanguage, "active-id", glib.SETTINGS_BIND_DEFAULT)
 	grid.Attach(cbUILanguage, DesignSecondCol, row, 1, 1)
 	initialLang := cbUILanguage.GetActiveID()
-	const restartServiceActivationMs = 1000
+	const restartServiceActivationMs = 500
 	restartServiceActivationTimer := time.AfterFunc(time.Millisecond*restartServiceActivationMs, func() {
 		MustIdleAdd(func() {
 			activate := initialLang != cbUILanguage.GetActiveID()
@@ -276,15 +276,20 @@ func GeneralPreferencesNew(win *gtk.ApplicationWindow, appSettings *SettingsStor
 		lblRestart.SetMarkup(locale.T(MsgPrefDlgRestartPanelCaptionWithLink, nil))
 		_, err = lblRestart.Connect("activate-link", func(v *gtk.Label, href string) {
 			if href == "restart_uri" {
-				core.SetAppRunMode(core.AppRunReload)
-				actionName := "QuitAction"
-				action := actions.LookupAction(actionName)
-				if action == nil {
-					err := errors.New(locale.T(MsgActionDoesNotFound,
-						struct{ ActionName string }{ActionName: actionName}))
-					lg.Fatal(err)
-				}
-				action.Activate(nil)
+				MustIdleAdd(func() {
+					core.SetAppRunMode(core.AppRunReload)
+					actionName := "QuitAction"
+					action := actions.LookupAction(actionName)
+					if action == nil {
+						err := errors.New(locale.T(MsgActionDoesNotFound,
+							struct{ ActionName string }{ActionName: actionName}))
+						lg.Fatal(err)
+					}
+					// close preference dialog window
+					win.Close()
+					// activate application quit action
+					action.Activate(nil)
+				})
 			}
 		})
 		if err != nil {
