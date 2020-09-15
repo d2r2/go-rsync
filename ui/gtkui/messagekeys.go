@@ -29,6 +29,8 @@ const (
 	MsgDialogNoButton      = "DialogNoButton"
 	MsgActionDoesNotFound  = "ActionDoesNotFound"
 
+	MsgMainAppSubsystemInitialized = "MainAppSubsystemInitialized"
+
 	MsgAboutDlgAppFeaturesAndBenefitsTitle   = "AboutDlgAppFeaturesAndBenefitsTitle"
 	MsgAboutDlgAppFeaturesAndBenefitsSection = "AboutDlgAppFeaturesAndBenefitsSection"
 	MsgAboutDlgAppDescriptionSection         = "AboutDlgAppDescriptionSection"

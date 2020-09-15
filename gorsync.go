@@ -24,8 +24,6 @@ import (
 	"github.com/d2r2/go-rsync/locale"
 	"github.com/d2r2/go-rsync/rsync"
 	"github.com/d2r2/go-rsync/ui/gtkui"
-	"github.com/d2r2/gotk3/gdk"
-	"github.com/d2r2/gotk3/gtk"
 	"github.com/d2r2/gotk3/libnotify"
 )
 
@@ -48,40 +46,6 @@ var (
 	buildnum string
 	version  string
 )
-
-// Core method to run app.
-func runApp() {
-	// Create application.
-	app, err := gtkui.CreateApp()
-	if err != nil {
-		lg.Fatal(err)
-	}
-
-	// Load GTK+ CSS styles from application assets (base.css file)
-	// and apply it globally at application level.
-	css, err := gtkui.GetBaseApplicationCSS()
-	if err != nil {
-		lg.Fatal(err)
-	}
-	provider, err := gtk.CssProviderNew()
-	if err != nil {
-		lg.Fatal(err)
-	}
-	err = provider.LoadFromData(css)
-	if err != nil {
-		lg.Fatal(err)
-	}
-	screen, err := gdk.ScreenGetDefault()
-	if err != nil {
-		lg.Fatal(err)
-	}
-	// Select "APPLICATION" or "USER" priority to override global "THEME" settings.
-	gtk.AddProviderForScreen(screen, provider, gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
-
-	// Run application.
-	app.Run([]string{})
-
-}
 
 // main entry
 func main() {
@@ -152,14 +116,16 @@ to create memory usage graph in pdf document.`)
 	}
 	lg.Info(locale.T(MsgMainAppSubsystemInitialized,
 		struct{ Subsystem string }{Subsystem: "Libnotify"}))
-	// Initialize GTK+ subsystem.
-	gtk.Init(nil)
-	lg.Info(locale.T(MsgMainAppSubsystemInitialized,
-		struct{ Subsystem string }{Subsystem: "GTK"}))
 
 	for {
+		// Create application.
+		app, err := gtkui.CreateApp()
+		if err != nil {
+			lg.Fatal(err)
+		}
+
 		// Run application.
-		runApp()
+		app.Run([]string{})
 
 		// If request was made to reload app, then we re-run app
 		// without exiting (can be used for changing app UI language).
@@ -186,6 +152,6 @@ to create memory usage graph in pdf document.`)
 		}
 	}
 
-	// Say godbye.
+	// Say goodbye.
 	lg.Info(locale.T(MsgMainAppExitedNormally, nil))
 }

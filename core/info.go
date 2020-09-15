@@ -40,10 +40,12 @@ const (
 // initialized with option:
 // -ldflags "-X main.version `head -1 version` -X main.buildnum `date -u +%Y%m%d%H%M%S`"
 var (
-	_buildnum   string
-	_version    string
-	_appRunMode AppRunMode
+	_buildnum string
+	_version  string
 )
+
+// Keep global application run mode.
+var _appRunMode AppRunMode
 
 // SetVersion save application version provided with compile via -ldflags CLI parameter.
 func SetVersion(version string) {
