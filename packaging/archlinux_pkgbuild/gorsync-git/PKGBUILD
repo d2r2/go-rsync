@@ -7,7 +7,7 @@ _pkgname=go-rsync
 # But better keep this value actual, since pkgver or pkgrel
 # variables are used to notify all users that an upgrade is needed:
 # https://wiki.archlinux.org/index.php/AUR_submission_guidelines
-pkgver=0.4.0
+pkgver=0.4.1
 epoch=
 pkgrel=1
 pkgdesc="GTK+ frontend (backup application) for RSYNC utility."
