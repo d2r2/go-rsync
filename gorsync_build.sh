@@ -4,7 +4,7 @@
 # to handle arguments containing whitespace.
 #
 # Written in 2004 by Hoylen Sue <hoylen@hoylen.com>
-# Modified in 2018-2020 by Denis Dyakov <denis.dyakov@gmail.com>
+# Modified in 2018-2022 by Denis Dyakov <denis.dyakov@gmail.com>
 #
 # To the extent possible under law, the author(s) have dedicated all copyright and
 # related and neighboring rights to this software to the public domain worldwide.
