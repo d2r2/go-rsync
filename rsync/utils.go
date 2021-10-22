@@ -1,6 +1,6 @@
 //--------------------------------------------------------------------------------------------------
 // This file is a part of Gorsync Backup project (backup RSYNC frontend).
-// Copyright (c) 2017-2020 Denis Dyakov <denis.dyakov@gmail.com>
+// Copyright (c) 2017-2022 Denis Dyakov <denis.dyakov@gma**.com>
 //
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
 // BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
