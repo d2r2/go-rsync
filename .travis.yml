@@ -6,14 +6,16 @@ go:
 #  - "1.11"
   - "1.15"
   - "1.17"
-  - "tip"
+#  - "tip"
 
 env:
   - GOARCH=amd64
 
 sudo: false
-dist: xenial
-dist: focal
+
+dist:
+  - xenial
+  - focal
 
 #services:
 #  - docker
